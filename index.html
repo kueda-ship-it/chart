@@ -610,6 +610,50 @@
             font-weight: bold;
             pointer-events: none;
         }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-body {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            width: 400px;
+            max-width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .checklist-item:hover {
+            background: #f8fafc;
+        }
     </style>
 </head>
 
@@ -646,9 +690,10 @@
             </div>
 
             <div class="m-tabs">
-                <div id="tab-users" class="m-tab-btn active" onclick="switchMasterTab('users')">👤 ユーザー管理</div>
-                <div id="tab-props" class="m-tab-btn" onclick="switchMasterTab('props')">🏗️ 物件・号機マスタ</div>
-                <div id="tab-cloud" class="m-tab-btn" onclick="switchMasterTab('cloud')">☁️ クラウド同期</div>
+                <div id="tab-users" class="m-tab-btn active" onclick="switchMasterTab('users')">👤 ユーザー</div>
+                <div id="tab-props" class="m-tab-btn" onclick="switchMasterTab('props')">🏢 物件・区分マスタ</div>
+                <div id="tab-l3" class="m-tab-btn" onclick="switchMasterTab('l3')">📋 工程区分リスト</div>
+                <div id="tab-cloud" class="m-tab-btn" onclick="switchMasterTab('cloud')">☁️ クラウド</div>
             </div>
 
             <div class="m-content">
@@ -680,21 +725,59 @@
                 </div>
 
                 <div id="sec-props" class="hidden-view">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <h4>🏢 物件マスタ</h4>
+                            <table class="m-table">
+                                <thead>
+                                    <tr>
+                                        <th>物件名</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="m-prop-list"></tbody>
+                            </table>
+                            <div style="display:flex; gap:5px;">
+                                <input type="text" id="m-p-name" placeholder="新しい物件名" style="flex:1">
+                                <button class="primary" onclick="addMProp()">追加</button>
+                            </div>
+                        </div>
+                        <div>
+                            <h4>🏷️ 物件区分 (Lv1) & 機種区分 (Lv2)</h4>
+                            <p style="font-size:0.8em; color:#64748b;">カンマ区切りで入力してください</p>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block; font-weight:bold; margin-bottom:5px;">物件区分 (Lv1):</label>
+                                <textarea id="m-l1-list"
+                                    style="width:100%; height:60px; padding:8px; border-radius:6px; border:1px solid #cbd5e1;"></textarea>
+                            </div>
+                            <div>
+                                <label style="display:block; font-weight:bold; margin-bottom:5px;">機種区分 (Lv2):</label>
+                                <textarea id="m-l2-list"
+                                    style="width:100%; height:80px; padding:8px; border-radius:6px; border:1px solid #cbd5e1;"></textarea>
+                            </div>
+                            <button class="primary" style="margin-top:10px;"
+                                onclick="saveL1L2Masters()">区分設定を保存</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sec-l3" class="hidden-view">
+                    <h3>📋 工程区分リスト (Lv3 チェックリスト)</h3>
+                    <p style="font-size:0.9em; color:#64748b; margin-bottom:15px;">
+                        物件の作成時に、ここにある項目からチェックを入れて一括追加できます。
+                    </p>
                     <table class="m-table">
                         <thead>
                             <tr>
-                                <th style="width:250px;">物件名</th>
-                                <th>選択可能な号機 (カンマ区切り)</th>
-                                <th style="width:80px;">操作</th>
+                                <th>工程名</th>
+                                <th>操作</th>
                             </tr>
                         </thead>
-                        <tbody id="m-prop-list"></tbody>
+                        <tbody id="m-l3-list"></tbody>
                     </table>
-                    <div
-                        style="display:flex; gap:10px; flex-wrap:wrap; background:#f8fafc; padding:15px; border-radius:8px;">
-                        <input type="text" id="m-p-name" placeholder="新しい物件名" style="width:200px;">
-                        <input type="text" id="m-p-goukis" placeholder="号機リスト (例: 1号機,2号機)" style="flex:1">
-                        <button class="primary" onclick="addMProp()">マスタ追加</button>
+                    <div style="display:flex; gap:10px; background:#f8fafc; padding:15px; border-radius:8px;">
+                        <input type="text" id="m-l3-name" placeholder="新しい工程名" style="flex:1">
+                        <button class="primary" onclick="addMChecklist()">追加</button>
                     </div>
                 </div>
 
@@ -768,26 +851,22 @@ function doGet(e) {
         </div>
         <div class="controls">
             <div class="input-group">
-                <label>🔍 検索:</label>
-                <input type="text" id="search-box" placeholder="キーワード入力..." oninput="render()">
+                👀 表示範囲:
+                <input type="date" id="view-start" onchange="updateViewRange()"> ～
+                <input type="date" id="view-end" onchange="updateViewRange()">
             </div>
-            <div class="input-group">
-                <label>尺度:</label>
-                <button onclick="changeZoom(1.1)">＋</button>
-                <button onclick="changeZoom(0.9)">－</button>
-            </div>
-            <div class="input-group">
-                <label>期間:</label>
-                <input type="date" id="view-start" onchange="updateViewRange()"> ～ <input type="date" id="view-end"
-                    onchange="updateViewRange()">
-            </div>
-            <button onclick="toggleAll(false)">全て閉じる</button>
-            <button onclick="toggleAll(true)">全て開く</button>
             <div style="flex:1"></div>
-            <button onclick="saveData()">💾 CSV保存</button>
-            <button onclick="document.getElementById('file-input').click()">📂 読込</button>
-            <input type="file" id="file-input" class="hidden" accept=".csv" onchange="loadData(event)">
-            <button class="primary" onclick="window.addNewProperty()">＋ 新規物件</button>
+            <button onclick="sortPropertiesByEvent()">🚨 優先ソート</button>
+            <button onclick="window.addNewProperty()">🏗️ 物件追加</button>
+            <div class="input-group" style="margin-left:10px; border-left:1px solid #cbd5e1; padding-left:10px;">
+                🔍 <input type="text" id="search-box" placeholder="検索..." onkeyup="render()">
+            </div>
+            <div style="margin-left:auto; display:flex; gap:5px;">
+                <button onclick="window.toggleAll(true)">開く</button>
+                <button onclick="window.toggleAll(false)">閉じる</button>
+                <button onclick="changeZoom(1.2)">🔍+</button>
+                <button onclick="changeZoom(0.8)">🔍-</button>
+            </div>
         </div>
 
         <div class="gantt-wrapper">
@@ -857,13 +936,12 @@ function doGet(e) {
                 { id: 'user', name: '一般ユーザー', role: 'user', pass: 'user' },
                 { id: 'viewer', name: '閲覧専用', role: 'viewer', pass: 'viewer' }
             ],
-            masterProperties: [
-                { name: "サンプル物件A", goukis: ["1号機", "2号機"] },
-                { name: "サンプル物件B", goukis: ["1号機"] },
-                { name: "サンプル物件C", goukis: ["A号機", "B号機"] }
-            ],
+            masterProperties: [], // 物件名リスト
+            masterL1: ["新築", "既存自社入替", "既存他社入替"], // 物件区分
+            masterL2: ["宅配", "ポスタク", "F-charge", "旭化成", "ポスタクNEO"], // 機種区分
+            masterL3: ["現地調査", "図面承認", "部材手配", "施工"], // 工程区分（チェックリスト用）
             // Cloud Sync
-            cloudUrl: 'https://script.google.com/macros/s/AKfycbwGPZF5eijcxnpEJh11NHz8_hxf6SVeDzX5vIUdS-IewkjsDDcuP8OwRdkEzWGLCOf0/exec', // 【管理者向け】ここにGASのウェブアプリURLを貼ると、全ユーザーで共有設定になります。
+            cloudUrl: 'https://script.google.com/macros/s/AKfycbwGPZF5eijcxnpEJh11NHz8_hxf6SVeDzX5vIUdS-IewkjsDDcuP8OwRdkEzWGLCOf0/exec',
             lastSync: null,
             masterTab: 'users'
         };
@@ -976,6 +1054,7 @@ function doGet(e) {
             // Update Section UI
             document.getElementById('sec-users').classList.toggle('hidden-view', state.masterTab !== 'users');
             document.getElementById('sec-props').classList.toggle('hidden-view', state.masterTab !== 'props');
+            document.getElementById('sec-l3').classList.toggle('hidden-view', state.masterTab !== 'l3');
             document.getElementById('sec-cloud').classList.toggle('hidden-view', state.masterTab !== 'cloud');
 
             if (state.masterTab === 'users') {
@@ -999,9 +1078,18 @@ function doGet(e) {
                 const pBody = document.getElementById('m-prop-list');
                 pBody.innerHTML = state.masterProperties.map((p, i) => `
                     <tr>
-                        <td><input type="text" value="${p.name}" onchange="updMProp(${i},'name',this.value)"></td>
-                        <td><input type="text" value="${(p.goukis || []).join(', ')}" onchange="updMProp(${i},'goukis',this.value)" style="width:100%"></td>
+                        <td><input type="text" value="${p.name || p}" onchange="updMProp(${i},'name',this.value)"></td>
                         <td><button class="danger" onclick="delMProp(${i})">削除</button></td>
+                    </tr>
+                `).join('');
+                document.getElementById('m-l1-list').value = state.masterL1.join(', ');
+                document.getElementById('m-l2-list').value = state.masterL2.join(', ');
+            } else if (state.masterTab === 'l3') {
+                const lBody = document.getElementById('m-l3-list');
+                lBody.innerHTML = (state.masterL3 || []).map((item, i) => `
+                    <tr>
+                        <td><input type="text" value="${item}" onchange="updML3(${i},this.value)" style="width:100%"></td>
+                        <td><button class="danger" onclick="delML3(${i})">削除</button></td>
                     </tr>
                 `).join('');
             } else if (state.masterTab === 'cloud') {
@@ -1082,11 +1170,7 @@ function doGet(e) {
             saveToLocalStorage();
         };
         window.updMProp = (i, k, v) => {
-            if (k === 'goukis') {
-                state.masterProperties[i].goukis = v.split(',').map(s => s.trim()).filter(s => s);
-            } else {
-                state.masterProperties[i][k] = v;
-            }
+            state.masterProperties[i][k] = v;
             saveToLocalStorage();
         };
 
@@ -1105,13 +1189,41 @@ function doGet(e) {
         };
         window.delMUser = (id) => { if (confirm('削除しますか？')) { state.masterUsers = state.masterUsers.filter(u => u.id !== id); saveToLocalStorage(); renderMaster(); } };
         window.addMProp = () => {
-            const name = document.getElementById('m-p-name').value, goukisStr = document.getElementById('m-p-goukis').value;
+            const name = document.getElementById('m-p-name').value;
             if (!name) return;
-            const goukis = goukisStr.split(',').map(s => s.trim()).filter(s => s);
-            state.masterProperties.push({ name, goukis });
+            state.masterProperties.push({ name });
             saveToLocalStorage(); renderMaster();
             document.getElementById('m-p-name').value = '';
-            document.getElementById('m-p-goukis').value = '';
+        };
+
+        window.saveL1L2Masters = () => {
+            const l1Str = document.getElementById('m-l1-list').value;
+            const l2Str = document.getElementById('m-l2-list').value;
+            state.masterL1 = l1Str.split(',').map(s => s.trim()).filter(s => s);
+            state.masterL2 = l2Str.split(',').map(s => s.trim()).filter(s => s);
+            saveToLocalStorage();
+            alert('物件区分・機種区分を保存しました');
+            renderMaster();
+        };
+
+        window.addMChecklist = () => {
+            const name = document.getElementById('m-l3-name').value;
+            if (!name) return;
+            state.masterL3.push(name);
+            saveToLocalStorage(); renderMaster();
+            document.getElementById('m-l3-name').value = '';
+        };
+
+        window.updML3 = (i, v) => {
+            state.masterL3[i] = v;
+            saveToLocalStorage();
+        };
+
+        window.delML3 = (i) => {
+            if (confirm('削除しますか？')) {
+                state.masterL3.splice(i, 1);
+                saveToLocalStorage(); renderMaster();
+            }
         };
 
         window.importMasterCSV = () => document.getElementById('m-csv-file').click();
@@ -1236,28 +1348,29 @@ function doGet(e) {
             const query = document.getElementById('search-box').value.toLowerCase();
 
             state.properties.forEach(p => {
-                calculateRollups(p);
-                const pMatch = p.name.toLowerCase().includes(query) || p.gouki.toLowerCase().includes(query);
-                const catMatches = p.categories.map(c => c.name.toLowerCase().includes(query) || c.tasks.some(t => t.name.toLowerCase().includes(query)));
-                if (!pMatch && !catMatches.includes(true) && query) return;
+                // p: Item (Level 0)
+                const pMatch = p.name.toLowerCase().includes(query);
+                if (!pMatch && query && !p.l1s?.some(l1 => l1.name.toLowerCase().includes(query))) return; // Simple filter
 
-                const isPCol = state.collapsedIds.has(p.id);
-                const pr = createRow('prop-row', p, 'p', p.id); lB.appendChild(pr.list); tC.appendChild(pr.time);
-                const pBar = createBar({ name: p.name, start: p.autoStart, end: p.autoEnd }, 'prop');
-                if (pBar) pr.time.appendChild(pBar);
+                const r0 = createRow('prop-row', p, 'p', p.id); lB.appendChild(r0.list); tC.appendChild(r0.time);
 
-                if (!isPCol) {
-                    p.categories.forEach((c, idx) => {
-                        if (!pMatch && !catMatches[idx] && query) return;
-                        const isCCol = state.collapsedIds.has(c.id);
-                        const cr = createRow('cat-row', c, 'c', p.id); lB.appendChild(cr.list); tC.appendChild(cr.time);
-                        const cBar = createBar({ name: c.name, start: c.autoStart, end: c.autoEnd }, 'summary');
-                        if (cBar) cr.time.appendChild(cBar);
-                        if (!isCCol) {
-                            c.tasks.forEach(t => {
-                                if (!pMatch && !catMatches[idx] && !t.name.toLowerCase().includes(query) && query) return;
-                                const tr = createRow('task-row', t, 't', p.id, c.id); lB.appendChild(tr.list); tC.appendChild(tr.time);
-                                const tBar = createBar(t, ''); if (tBar) tr.time.appendChild(tBar);
+                if (!state.collapsedIds.has(p.id)) {
+                    (p.l1s || []).forEach(l1 => {
+                        // l1: 物件区分 (Level 1)
+                        const r1 = createRow('cat-row', l1, 'l1', p.id); lB.appendChild(r1.list); tC.appendChild(r1.time);
+
+                        if (!state.collapsedIds.has(l1.id)) {
+                            (l1.l2s || []).forEach(l2 => {
+                                // l2: 機種区分 (Level 2)
+                                const r2 = createRow('cat-row', l2, 'l2', p.id, l1.id); lB.appendChild(r2.list); tC.appendChild(r2.time);
+
+                                if (!state.collapsedIds.has(l2.id)) {
+                                    (l2.items || []).forEach(l3 => {
+                                        // l3: 工程区分 (Level 3)
+                                        const r3 = createRow('task-row', l3, 'l3', p.id, l1.id, l2.id); lB.appendChild(r3.list); tC.appendChild(r3.time);
+                                        renderL3Bars(l3, r3.time);
+                                    });
+                                }
                             });
                         }
                     });
@@ -1265,7 +1378,7 @@ function doGet(e) {
             });
         }
 
-        function createRow(type, data, lv, pI, cI) {
+        function createRow(type, data, lv, pI, l1I, l2I) {
             const list = document.createElement('div'); list.className = `row-container ${type}`;
             const time = document.createElement('div'); time.className = `row-container ${type}`;
             const isCol = state.collapsedIds.has(data.id);
@@ -1274,40 +1387,73 @@ function doGet(e) {
             const dis = canEdit ? '' : 'disabled';
 
             if (lv === 'p') {
-                const curM = state.masterProperties.find(p => (p.name || p) === data.name) || state.masterProperties[0];
-                const optPropHtml = state.masterProperties.map(p => {
-                    const n = p.name || p;
-                    return `<option value="${n}" ${data.name === n ? 'selected' : ''}>${n}</option>`;
-                }).join('');
-                const gL = curM?.goukis || ["1号機"];
-                const optGoukiHtml = gL.map(g => `<option value="${g}" ${data.gouki === g ? 'selected' : ''}>${g}</option>`).join('');
+                const optPropHtml = state.masterProperties.map(p => `<option value="${p.name}" ${data.name === p.name ? 'selected' : ''}>${p.name}</option>`).join('');
                 list.innerHTML = `
                     <div class="cell col-btn"><button class="danger" onclick="window.delP('${data.id}')" ${dis}>×</button></div>
-                    <div class="cell col-gouki"><select onchange="upd('${data.id}','gouki',this.value,'p')" ${dis}>${optGoukiHtml}</select></div>
+                    <div class="cell col-gouki"></div>
                     <div class="cell col-prop">${toggleIcon}<select onchange="upd('${data.id}','name',this.value,'p')" ${dis}>${optPropHtml}</select></div>
-                    <div class="cell col-name"><button class="primary" onclick="window.addC('${data.id}')" ${dis}>✙ フォルダ追加</button></div>
-                    <div class="cell col-date">${data.autoStart || ''}</div><div class="cell col-date">${data.autoEnd || ''}</div><div class="cell col-h"></div><div class="cell col-h"></div><div class="cell col-note"></div>
+                    <div class="cell col-name"><button class="primary" onclick="window.addL1('${data.id}')" ${dis}>✙ 物件区分追加</button></div>
+                    <div class="cell col-date">--</div><div class="cell col-date">--</div><div class="cell col-h"></div><div class="cell col-h"></div><div class="cell col-note"></div>
                 `;
-            } else if (lv === 'c') {
+            } else if (lv === 'l1') {
+                const optL1 = state.masterL1.map(v => `<option value="${v}" ${data.name === v ? 'selected' : ''}>${v}</option>`).join('');
                 list.innerHTML = `
-                    <div class="cell col-btn"><button class="danger" onclick="window.delC('${pI}','${data.id}')" ${dis}>×</button></div>
+                    <div class="cell col-btn"><button class="danger" onclick="window.delL1('${pI}','${data.id}')" ${dis}>×</button></div>
                     <div class="cell col-gouki"></div><div class="cell col-prop"></div>
-                    <div class="cell col-name"><div style="padding-left:15px;display:flex;align-items:center;width:100%">${toggleIcon}<input type="text" value="${data.name}" onchange="upd('${data.id}','name',this.value,'c','${pI}')" ${dis}><button onclick="window.addT('${pI}','${data.id}')" style="margin-left:5px" ${dis}>＋工程</button></div></div>
-                    <div class="cell col-date">${data.autoStart || ''}</div><div class="cell col-date">${data.autoEnd || ''}</div><div class="cell col-h"></div><div class="cell col-h"></div><div class="cell col-note"></div>
+                    <div class="cell col-name"><div style="padding-left:15px;display:flex;align-items:center,width:100%">${toggleIcon}<select onchange="upd('${data.id}','name',this.value,'l1','${pI}')" ${dis}>${optL1}</select><button onclick="window.addL2('${pI}','${data.id}')" style="margin-left:5px" ${dis}>＋機種区分</button></div></div>
+                    <div class="cell col-date">--</div><div class="cell col-date">--</div><div class="cell col-h"></div><div class="cell col-h"></div><div class="cell col-note"></div>
+                `;
+            } else if (lv === 'l2') {
+                const optL2 = state.masterL2.map(v => `<option value="${v}" ${data.name === v ? 'selected' : ''}>${v}</option>`).join('');
+                list.innerHTML = `
+                    <div class="cell col-btn"><button class="danger" onclick="window.delL2('${pI}','${l1I}','${data.id}')" ${dis}>×</button></div>
+                    <div class="cell col-gouki"></div><div class="cell col-prop"></div>
+                    <div class="cell col-name"><div style="padding-left:30px;display:flex;align-items:center,width:100%">${toggleIcon}<select onchange="upd('${data.id}','name',this.value,'l2','${pI}','${l1I}')" ${dis}>${optL2}</select><button onclick="window.openItemModal('${pI}','${l1I}','${data.id}')" style="margin-left:5px" ${dis}>＋工程</button></div></div>
+                    <div class="cell col-date">--</div><div class="cell col-date">--</div><div class="cell col-h"></div><div class="cell col-h"></div><div class="cell col-note"></div>
                 `;
             } else {
+                // Level 3: Advanced Task with 10 slots
+                const dateInputs = (data.dates || []).map((d, idx) => `<input type="date" value="${d}" onchange="updL3Date('${pI}','${l1I}','${l2I}','${data.id}',${idx},this.value)" style="width:110px; margin-right:2px;" ${dis}>`).join('');
+                const addDateBtn = (data.dates || []).length < 10 ? `<button onclick="addL3Date('${pI}','${l1I}','${l2I}','${data.id}')" ${dis}>+</button>` : '';
+
+                const status = getL3Status(data);
+                let statusColor = '#94a3b8'; // gray
+                if (status === 'overdue') statusColor = '#ef4444'; // red
+                else if (status === 'incomplete') statusColor = '#eab308'; // yellow
+
                 list.innerHTML = `
-                    <div class="cell col-btn"><button class="danger" onclick="window.delT('${pI}','${cI}','${data.id}')" ${dis}>×</button></div>
-                    <div class="cell col-gouki"></div><div class="cell col-prop"></div>
-                    <div class="cell col-name"><div style="padding-left:35px;width:100%"><input type="text" value="${data.name}" onchange="upd('${data.id}','name',this.value,'t','${pI}','${cI}')" ${dis}></div></div>
-                    <div class="cell col-date"><input type="date" value="${data.start}" onchange="upd('${data.id}','start',this.value,'t','${pI}','${cI}')" ${dis}></div>
-                    <div class="cell col-date"><input type="date" value="${data.end}" onchange="upd('${data.id}','end',this.value,'t','${pI}','${cI}')" ${dis}></div>
-                    <div class="cell col-h"><input type="number" value="${data.planH}" step="0.5" onchange="upd('${data.id}','planH',this.value,'t','${pI}','${cI}')" ${dis}></div>
-                    <div class="cell col-h"><input type="number" value="${data.actH}" step="0.5" onchange="upd('${data.id}','actH',this.value,'t','${pI}','${cI}')" ${dis}></div>
-                    <div class="cell col-note"><input type="text" value="${data.note}" onchange="upd('${data.id}','note',this.value,'t','${pI}','${cI}')" ${dis}></div>
+                    <div class="cell col-btn"><button class="danger" onclick="window.delL3('${pI}','${l1I}','${l2I}','${data.id}')" ${dis}>×</button></div>
+                    <div class="cell col-gouki"><div style="width:15px; height:15px; border-radius:50%; background:${statusColor};" title="${status}"></div></div>
+                    <div class="cell col-prop"></div>
+                    <div class="cell col-name"><div style="padding-left:45px;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${data.name}">${data.name}</div></div>
+                    <div class="cell" style="flex:1; min-width:300px; display:flex; align-items:center; overflow-x:auto;">
+                        ${dateInputs} ${addDateBtn}
+                    </div>
+                    <div class="cell col-h" style="width:60px; flex:0 0 60px;">${(data.dates || []).filter(d => d).length}回</div>
+                    <div class="cell col-note"><input type="text" value="${data.note || ''}" onchange="upd('${data.id}','note',this.value,'l3','${pI}','${l1I}','${l2I}')" ${dis}></div>
                 `;
             }
             return { list, time };
+        }
+
+        function renderL3Bars(l3, container) {
+            const vS = parseDate(state.viewStart);
+            if (!vS || !l3.dates) return;
+            const dw = 30 * state.zoom;
+
+            l3.dates.forEach(dS => {
+                const date = parseDate(dS);
+                if (!date) return;
+                const bar = document.createElement('div');
+                bar.className = 'task-bar milestone';
+                bar.style.left = (getDiffDays(vS, date) * dw + (dw / 2)) + 'px';
+
+                const lbl = document.createElement('span');
+                lbl.className = 'milestone-label';
+                lbl.innerText = l3.name;
+                bar.appendChild(lbl);
+                container.appendChild(bar);
+            });
         }
 
         function createBar(t, cls) {
@@ -1359,41 +1505,165 @@ function doGet(e) {
         };
 
         window.toggleCollapse = (id) => { if (state.collapsedIds.has(id)) state.collapsedIds.delete(id); else state.collapsedIds.add(id); saveToLocalStorage(); render(); };
-        window.toggleAll = (exp) => { state.collapsedIds.clear(); if (!exp) { state.properties.forEach(p => { state.collapsedIds.add(p.id); p.categories.forEach(c => state.collapsedIds.add(c.id)); }); } saveToLocalStorage(); render(); };
+        window.toggleAll = (exp) => {
+            state.collapsedIds.clear();
+            if (!exp) {
+                state.properties.forEach(p => {
+                    state.collapsedIds.add(p.id);
+                    (p.l1s || []).forEach(l1 => {
+                        state.collapsedIds.add(l1.id);
+                        (l1.l2s || []).forEach(l2 => state.collapsedIds.add(l2.id));
+                    });
+                });
+            }
+            saveToLocalStorage(); render();
+        };
         window.changeZoom = (f) => { state.zoom = Math.max(0.3, Math.min(3.0, state.zoom * f)); saveToLocalStorage(); render(); };
 
-        window.upd = (id, k, v, lv, pI, cI) => {
+        window.upd = (id, k, v, lv, pI, l1I, l2I) => {
             if (state.currentUser?.role === 'viewer') return;
             if (lv === 'p') {
                 const p = state.properties.find(x => x.id === id);
-                if (p) {
-                    p[k] = v;
-                    // 物件名が変更された場合、号機をその物件の最初の選択肢に自動更新する
-                    if (k === 'name') {
-                        const mProp = state.masterProperties.find(mp => mp.name === v);
-                        if (mProp && mProp.goukis && mProp.goukis.length > 0) {
-                            p.gouki = mProp.goukis[0];
-                        }
-                    }
-                }
+                if (p) p[k] = v;
+            } else if (lv === 'l1') {
+                const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === id);
+                if (l1) l1[k] = v;
+            } else if (lv === 'l2') {
+                const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I), l2 = l1?.l2s.find(x => x.id === id);
+                if (l2) l2[k] = v;
+            } else if (lv === 'l3') {
+                const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I), l2 = l1?.l2s.find(x => x.id === l2I), l3 = l2?.items.find(x => x.id === id);
+                if (l3) l3[k] = v;
             }
-            else if (lv === 'c') { const p = state.properties.find(x => x.id === pI), c = p?.categories.find(x => x.id === id); if (c) c[k] = v; }
-            else { const p = state.properties.find(x => x.id === pI), c = p?.categories.find(x => x.id === cI), t = c?.tasks.find(x => x.id === id); if (t) { if (k === 'planH' || k === 'actH') v = parseFloat(v) || 0; t[k] = v; } }
-            saveToLocalStorage();
-            render();
+            saveToLocalStorage(); render();
         };
 
         window.addNewProperty = () => {
             if (state.currentUser?.role === 'viewer') return;
-            state.properties.push({ id: generateId(), name: state.masterProperties[0] || "新規物件", gouki: "1号機", categories: [] });
+            state.properties.push({ id: generateId(), name: state.masterProperties[0]?.name || "新規物件", l1s: [] });
             saveToLocalStorage(); render();
         };
-        window.addC = (pI) => { if (state.currentUser?.role === 'viewer') return; const p = state.properties.find(x => x.id === pI); if (p) p.categories.push({ id: generateId(), name: "カテゴリ", tasks: [] }); saveToLocalStorage(); render(); };
-        window.addT = (pI, cI) => { if (state.currentUser?.role === 'viewer') return; const p = state.properties.find(x => x.id === pI), c = p?.categories.find(x => x.id === cI); if (c) c.tasks.push({ id: generateId(), name: "新規工程", start: formatDate(new Date()), end: formatDate(new Date()), planH: 0, actH: 0, note: "" }); saveToLocalStorage(); render(); };
+        window.addL1 = (pI) => {
+            const p = state.properties.find(x => x.id === pI);
+            if (p) {
+                if (!p.l1s) p.l1s = [];
+                p.l1s.push({ id: generateId(), name: state.masterL1[0] || "新規区分", l2s: [] });
+            }
+            saveToLocalStorage(); render();
+        };
+        window.addL2 = (pI, l1I) => {
+            const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I);
+            if (l1) {
+                if (!l1.l2s) l1.l2s = [];
+                l1.l2s.push({ id: generateId(), name: state.masterL2[0] || "新規機種", items: [] });
+            }
+            saveToLocalStorage(); render();
+        };
 
-        window.delP = (id) => { if (state.currentUser?.role === 'viewer') return; if (confirm("物件を削除しますか？")) { state.properties = state.properties.filter(x => x.id !== id); saveToLocalStorage(); render(); } };
-        window.delC = (pI, cI) => { if (state.currentUser?.role === 'viewer') return; if (confirm("フォルダを削除しますか？")) { const p = state.properties.find(x => x.id === pI); if (p) p.categories = p.categories.filter(x => x.id !== cI); saveToLocalStorage(); render(); } };
-        window.delT = (pI, cI, tI) => { if (state.currentUser?.role === 'viewer') return; if (confirm("工程を削除しますか？")) { const p = state.properties.find(x => x.id === pI), c = p?.categories.find(x => x.id === cI); if (c) c.tasks = c.tasks.filter(x => x.id !== tI); saveToLocalStorage(); render(); } };
+        window.updL3Date = (pI, l1I, l2I, l3I, idx, v) => {
+            const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I), l2 = l1?.l2s.find(x => x.id === l2I), l3 = l2?.items.find(x => x.id === l3I);
+            if (l3 && l3.dates) {
+                l3.dates[idx] = v;
+                saveToLocalStorage(); render();
+            }
+        };
+        window.addL3Date = (pI, l1I, l2I, l3I) => {
+            const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I), l2 = l1?.l2s.find(x => x.id === l2I), l3 = l2?.items.find(x => x.id === l3I);
+            if (l3) {
+                if (!l3.dates) l3.dates = [];
+                if (l3.dates.length < 10) {
+                    l3.dates.push(formatDate(new Date()));
+                    saveToLocalStorage(); render();
+                }
+            }
+        };
+
+        window.delP = (id) => { if (confirm("物件を削除しますか？")) { state.properties = state.properties.filter(x => x.id !== id); saveToLocalStorage(); render(); } };
+        window.delL1 = (pI, id) => { if (confirm("物件区分を削除しますか？")) { const p = state.properties.find(x => x.id === pI); if (p) p.l1s = p.l1s.filter(x => x.id !== id); saveToLocalStorage(); render(); } };
+        window.delL2 = (pI, l1I, id) => { if (confirm("機種区分を削除しますか？")) { const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I); if (l1) l1.l2s = l1.l2s.filter(x => x.id !== id); saveToLocalStorage(); render(); } };
+        window.delL3 = (pI, l1I, l2I, id) => { if (confirm("工程を削除しますか？")) { const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I), l2 = l1?.l2s.find(x => x.id === l2I); if (l2) l2.items = l2.items.filter(x => x.id !== id); saveToLocalStorage(); render(); } };
+
+        let currentModalContext = null;
+        window.openItemModal = (pI, l1I, l2I) => {
+            currentModalContext = { pI, l1I, l2I };
+            const container = document.getElementById('modal-checklist-container');
+            container.innerHTML = state.masterL3.map(item => `
+                <div class="checklist-item">
+                    <input type="checkbox" data-name="${item}" id="chk-${item}">
+                    <label for="chk-${item}">${item}</label>
+                </div>
+            `).join('');
+            document.getElementById('item-modal').style.display = 'flex';
+        };
+
+        window.closeItemModal = () => {
+            document.getElementById('item-modal').style.display = 'none';
+        };
+
+        window.addSelectedItems = () => {
+            if (!currentModalContext) return;
+            const { pI, l1I, l2I } = currentModalContext;
+            const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I), l2 = l1?.l2s.find(x => x.id === l2I);
+            if (!l2) return;
+
+            const selected = Array.from(document.querySelectorAll('#modal-checklist-container input:checked')).map(cb => cb.dataset.name);
+            selected.forEach(name => {
+                if (!l2.items) l2.items = [];
+                l2.items.push({ id: generateId(), name, dates: [], note: "" });
+            });
+            saveToLocalStorage(); render(); closeItemModal();
+        };
+
+        window.sortPropertiesByEvent = () => {
+            state.properties.sort((a, b) => {
+                const aScore = getPriorityScore(a);
+                const bScore = getPriorityScore(b);
+                return bScore - aScore;
+            });
+            render();
+            alert('優先度順にソートしました（未完了・期限切れ項目が多い順）');
+        };
+
+        function getPriorityScore(p) {
+            let score = 0;
+            (p.l1s || []).forEach(l1 => {
+                (l1.l2s || []).forEach(l2 => {
+                    (l2.items || []).forEach(l3 => {
+                        const status = getL3Status(l3);
+                        if (status === 'overdue') score += 10;
+                        else if (status === 'incomplete') score += 1;
+                    });
+                });
+            });
+            return score;
+        }
+
+        function getL3Status(l3) {
+            const todayStr = formatDate(new Date());
+            const hasDates = (l3.dates || []).filter(d => d).length > 0;
+
+            if (!hasDates) {
+                // If no dates are set, it's incomplete
+                return 'incomplete';
+            }
+
+            // Check if any date is in the future
+            const hasFutureDates = (l3.dates || []).some(d => {
+                const date = parseDate(d);
+                return date && formatDate(date) > todayStr;
+            });
+
+            if (hasFutureDates) {
+                // If there's at least one future date, it's still in progress or planned
+                return 'done'; // Or 'in-progress' if we want more granularity
+            }
+
+            // If all dates are in the past or today, and there are dates, it's considered done
+            // If we want to mark as 'overdue' if all dates are past and no future dates,
+            // but the task is not "completed" (e.g., no actual completion date), we need a 'completed' flag.
+            // For now, if dates exist and none are future, it's 'done'.
+            return 'done';
+        }
 
         function updateViewRange() { state.viewStart = new Date(document.getElementById('view-start').value); state.viewEnd = new Date(document.getElementById('view-end').value); saveToLocalStorage(); render(); }
 
