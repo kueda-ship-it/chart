@@ -863,7 +863,7 @@ function doGet(e) {
                 { name: "サンプル物件C", goukis: ["A号機", "B号機"] }
             ],
             // Cloud Sync
-            cloudUrl: '', // 【管理者向け】ここにGASのウェブアプリURLを貼ると、全ユーザーで共有設定になります。
+            cloudUrl: 'https://script.google.com/macros/s/AKfycbwGPZF5eijcxnpEJh11NHz8_hxf6SVeDzX5vIUdS-IewkjsDDcuP8OwRdkEzWGLCOf0/exec', // 【管理者向け】ここにGASのウェブアプリURLを貼ると、全ユーザーで共有設定になります。
             lastSync: null,
             masterTab: 'users'
         };
@@ -891,10 +891,12 @@ function doGet(e) {
         };
 
         function init() {
+            const hardcodedUrl = state.cloudUrl; // スクリプト内の固定URLを退避
             const saved = loadFromLocalStorage();
             if (saved) {
-                // Merge saved data into default state to handle schema changes
                 state = { ...state, ...saved };
+                // 保存された設定が空でも、固定URLがあればそちらを優先
+                if (hardcodedUrl && !state.cloudUrl) state.cloudUrl = hardcodedUrl;
                 // 既存ユーザーにパスワードがない場合の補完（移行措置）
                 state.masterUsers.forEach(u => {
                     if (!u.pass) u.pass = (u.id === 'admin') ? 'fts2531de' : u.id;
@@ -1059,10 +1061,14 @@ function doGet(e) {
                     state.viewEnd = parseDate(state.viewEnd) || new Date();
                     state.collapsedIds = new Set(state.collapsedIds || []);
                     state.lastSync = new Date().toLocaleString();
-                    saveToLocalStorage();
+
+                    // クラウドから読み込んだ直後にクラウドへ保存（ループ）するのを防ぐ
+                    const dataToSave = { ...state, collapsedIds: Array.from(state.collapsedIds) };
+                    localStorage.setItem('gantt_state', JSON.stringify(dataToSave));
+
                     render();
                     if (document.getElementById('master-screen').style.display === 'flex') renderMaster();
-                    alert('クラウドからデータを読み込みました');
+                    console.log('Cloud data loaded successfully');
                 }
             } catch (e) {
                 console.error('Cloud load failed', e);
