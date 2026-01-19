@@ -857,6 +857,7 @@ function doGet(e) {
             </div>
             <div style="flex:1"></div>
             <button onclick="sortPropertiesByEvent()">🚨 優先ソート</button>
+            <button onclick="window.location.href='calendar.html'">📅 予定表を開く</button>
             <button onclick="window.addNewProperty()">🏗️ 物件追加</button>
             <div class="input-group" style="margin-left:10px; border-left:1px solid #cbd5e1; padding-left:10px;">
                 🔍 <input type="text" id="search-box" placeholder="検索..." onkeyup="render()">
@@ -1272,20 +1273,32 @@ function doGet(e) {
 
         function calculateRollups(p) {
             let pMin = null, pMax = null;
-            p.categories.forEach(c => {
-                let cMin = null, cMax = null;
-                c.tasks.forEach(t => {
-                    const st = parseDate(t.start), ed = parseDate(t.end);
-                    if (st && (!cMin || st < cMin)) cMin = st;
-                    if (ed && (!cMax || ed > cMax)) cMax = ed;
+            let tPlan = 0, tAct = 0;
+
+            const processNode = (node) => {
+                if (!node) return;
+                const st = parseDate(node.start), ed = parseDate(node.end);
+                if (st && (!pMin || st < pMin)) pMin = st;
+                if (ed && (!pMax || ed > pMax)) pMax = ed;
+            };
+
+            processNode(p.l1);
+            processNode(p.l2);
+
+            (p.items || []).forEach(item => {
+                tPlan += parseFloat(item.planH) || 0;
+                tAct += parseFloat(item.actH) || 0;
+                (item.dates || []).forEach(dS => {
+                    const d = parseDate(dS);
+                    if (d && (!pMin || d < pMin)) pMin = d;
+                    if (d && (!pMax || d > pMax)) pMax = d;
                 });
-                c.autoStart = formatDate(cMin);
-                c.autoEnd = formatDate(cMax);
-                if (cMin && (!pMin || cMin < pMin)) pMin = cMin;
-                if (cMax && (!pMax || cMax > pMax)) pMax = cMax;
             });
-            p.autoStart = formatDate(pMin);
-            p.autoEnd = formatDate(pMax);
+
+            p.autoStart = pMin ? formatDate(pMin) : "";
+            p.autoEnd = pMax ? formatDate(pMax) : "";
+            p.totalPlanH = tPlan;
+            p.totalActH = tAct;
         }
 
         function render() {
@@ -1348,37 +1361,44 @@ function doGet(e) {
             const query = document.getElementById('search-box').value.toLowerCase();
 
             state.properties.forEach(p => {
-                // p: Item (Level 0)
-                const pMatch = p.name.toLowerCase().includes(query);
-                if (!pMatch && query && !p.l1s?.some(l1 => l1.name.toLowerCase().includes(query))) return; // Simple filter
+                // Ensure data structure (Migration/Fix)
+                if (!p.l1) p.l1 = { id: generateId(), name: state.masterL1[0], start: formatDate(new Date()), end: formatDate(new Date()) };
+                if (!p.l2) p.l2 = { id: generateId(), name: state.masterL2[0], start: formatDate(new Date()), end: formatDate(new Date()) };
+                if (!p.items) p.items = [];
 
+                calculateRollups(p);
+
+                // p: Item (Level 0)
+                const pMatch = p.name.toLowerCase().includes(query) || (p.note && p.note.toLowerCase().includes(query));
+                if (!pMatch && query && !p.l1?.name.toLowerCase().includes(query)) return;
+
+                // Render 物件 (Lv0)
                 const r0 = createRow('prop-row', p, 'p', p.id); lB.appendChild(r0.list); tC.appendChild(r0.time);
+                const b0 = createBar({ name: p.name, start: p.autoStart, end: p.autoEnd }, 'prop'); if (b0) r0.time.appendChild(b0);
 
                 if (!state.collapsedIds.has(p.id)) {
-                    (p.l1s || []).forEach(l1 => {
-                        // l1: 物件区分 (Level 1)
-                        const r1 = createRow('cat-row', l1, 'l1', p.id); lB.appendChild(r1.list); tC.appendChild(r1.time);
+                    // Render 物件区分 (Lv1) - Exactly ONE
+                    const r1 = createRow('cat-row', p.l1, 'l1', p.id); lB.appendChild(r1.list); tC.appendChild(r1.time);
+                    const b1 = createBar(p.l1, 'summary'); if (b1) r1.time.appendChild(b1);
 
-                        if (!state.collapsedIds.has(l1.id)) {
-                            (l1.l2s || []).forEach(l2 => {
-                                // l2: 機種区分 (Level 2)
-                                const r2 = createRow('cat-row', l2, 'l2', p.id, l1.id); lB.appendChild(r2.list); tC.appendChild(r2.time);
+                    if (!state.collapsedIds.has(p.l1.id)) {
+                        // Render 機種区分 (Lv2) - Exactly ONE
+                        const r2 = createRow('cat-row', p.l2, 'l2', p.id); lB.appendChild(r2.list); tC.appendChild(r2.time);
+                        const b2 = createBar(p.l2, 'summary'); if (b2) r2.time.appendChild(b2);
 
-                                if (!state.collapsedIds.has(l2.id)) {
-                                    (l2.items || []).forEach(l3 => {
-                                        // l3: 工程区分 (Level 3)
-                                        const r3 = createRow('task-row', l3, 'l3', p.id, l1.id, l2.id); lB.appendChild(r3.list); tC.appendChild(r3.time);
-                                        renderL3Bars(l3, r3.time);
-                                    });
-                                }
+                        if (!state.collapsedIds.has(p.l2.id)) {
+                            // Render 工程区分 (Lv3) - Multiple
+                            (p.items || []).forEach(l3 => {
+                                const r3 = createRow('task-row', l3, 'l3', p.id); lB.appendChild(r3.list); tC.appendChild(r3.time);
+                                renderL3Bars(l3, r3.time);
                             });
                         }
-                    });
+                    }
                 }
             });
         }
 
-        function createRow(type, data, lv, pI, l1I, l2I) {
+        function createRow(type, data, lv, pI) {
             const list = document.createElement('div'); list.className = `row-container ${type}`;
             const time = document.createElement('div'); time.className = `row-container ${type}`;
             const isCol = state.collapsedIds.has(data.id);
@@ -1392,29 +1412,36 @@ function doGet(e) {
                     <div class="cell col-btn"><button class="danger" onclick="window.delP('${data.id}')" ${dis}>×</button></div>
                     <div class="cell col-gouki"></div>
                     <div class="cell col-prop">${toggleIcon}<select onchange="upd('${data.id}','name',this.value,'p')" ${dis}>${optPropHtml}</select></div>
-                    <div class="cell col-name"><button class="primary" onclick="window.addL1('${data.id}')" ${dis}>✙ 物件区分追加</button></div>
-                    <div class="cell col-date">--</div><div class="cell col-date">--</div><div class="cell col-h"></div><div class="cell col-h"></div><div class="cell col-note"></div>
+                    <div class="cell col-name"></div>
+                    <div class="cell col-date">${data.autoStart || "--"}</div><div class="cell col-date">${data.autoEnd || "--"}</div>
+                    <div class="cell col-h">${data.totalPlanH || 0}</div>
+                    <div class="cell col-h">${data.totalActH || 0}</div>
+                    <div class="cell col-note"><input type="text" value="${data.note || ''}" onchange="upd('${data.id}','note',this.value,'p')" ${dis} placeholder="物件備考..."></div>
                 `;
             } else if (lv === 'l1') {
                 const optL1 = state.masterL1.map(v => `<option value="${v}" ${data.name === v ? 'selected' : ''}>${v}</option>`).join('');
                 list.innerHTML = `
-                    <div class="cell col-btn"><button class="danger" onclick="window.delL1('${pI}','${data.id}')" ${dis}>×</button></div>
+                    <div class="cell col-btn"></div>
                     <div class="cell col-gouki"></div><div class="cell col-prop"></div>
-                    <div class="cell col-name"><div style="padding-left:15px;display:flex;align-items:center,width:100%">${toggleIcon}<select onchange="upd('${data.id}','name',this.value,'l1','${pI}')" ${dis}>${optL1}</select><button onclick="window.addL2('${pI}','${data.id}')" style="margin-left:5px" ${dis}>＋機種区分</button></div></div>
-                    <div class="cell col-date">--</div><div class="cell col-date">--</div><div class="cell col-h"></div><div class="cell col-h"></div><div class="cell col-note"></div>
+                    <div class="cell col-name"><div style="padding-left:15px;display:flex;align-items:center;width:100%">${toggleIcon}<select onchange="upd('${data.id}','name',this.value,'l1','${pI}')" ${dis}>${optL1}</select></div></div>
+                    <div class="cell col-date"><input type="date" value="${data.start}" onchange="upd('${data.id}','start',this.value,'l1','${pI}')" ${dis}></div>
+                    <div class="cell col-date"><input type="date" value="${data.end}" onchange="upd('${data.id}','end',this.value,'l1','${pI}')" ${dis}></div>
+                    <div class="cell col-h"></div><div class="cell col-h"></div><div class="cell col-note"></div>
                 `;
             } else if (lv === 'l2') {
                 const optL2 = state.masterL2.map(v => `<option value="${v}" ${data.name === v ? 'selected' : ''}>${v}</option>`).join('');
                 list.innerHTML = `
-                    <div class="cell col-btn"><button class="danger" onclick="window.delL2('${pI}','${l1I}','${data.id}')" ${dis}>×</button></div>
+                    <div class="cell col-btn"></div>
                     <div class="cell col-gouki"></div><div class="cell col-prop"></div>
-                    <div class="cell col-name"><div style="padding-left:30px;display:flex;align-items:center,width:100%">${toggleIcon}<select onchange="upd('${data.id}','name',this.value,'l2','${pI}','${l1I}')" ${dis}>${optL2}</select><button onclick="window.openItemModal('${pI}','${l1I}','${data.id}')" style="margin-left:5px" ${dis}>＋工程</button></div></div>
-                    <div class="cell col-date">--</div><div class="cell col-date">--</div><div class="cell col-h"></div><div class="cell col-h"></div><div class="cell col-note"></div>
+                    <div class="cell col-name"><div style="padding-left:30px;display:flex;align-items:center;width:100%">${toggleIcon}<select onchange="upd('${data.id}','name',this.value,'l2','${pI}')" ${dis}>${optL2}</select><button onclick="window.openItemModal('${pI}')" style="margin-left:5px" ${dis}>＋工程</button></div></div>
+                    <div class="cell col-date"><input type="date" value="${data.start}" onchange="upd('${data.id}','start',this.value,'l2','${pI}')" ${dis}></div>
+                    <div class="cell col-date"><input type="date" value="${data.end}" onchange="upd('${data.id}','end',this.value,'l2','${pI}')" ${dis}></div>
+                    <div class="cell col-h"></div><div class="cell col-h"></div><div class="cell col-note"></div>
                 `;
             } else {
                 // Level 3: Advanced Task with 10 slots
-                const dateInputs = (data.dates || []).map((d, idx) => `<input type="date" value="${d}" onchange="updL3Date('${pI}','${l1I}','${l2I}','${data.id}',${idx},this.value)" style="width:110px; margin-right:2px;" ${dis}>`).join('');
-                const addDateBtn = (data.dates || []).length < 10 ? `<button onclick="addL3Date('${pI}','${l1I}','${l2I}','${data.id}')" ${dis}>+</button>` : '';
+                const dateInputs = (data.dates || []).map((d, idx) => `<input type="date" value="${d}" onchange="updL3Date('${pI}','${data.id}',${idx},this.value)" style="width:110px; margin-right:2px;" ${dis}>`).join('');
+                const addDateBtn = (data.dates || []).length < 10 ? `<button onclick="addL3Date('${pI}','${data.id}')" ${dis}>+</button>` : '';
 
                 const status = getL3Status(data);
                 let statusColor = '#94a3b8'; // gray
@@ -1422,15 +1449,16 @@ function doGet(e) {
                 else if (status === 'incomplete') statusColor = '#eab308'; // yellow
 
                 list.innerHTML = `
-                    <div class="cell col-btn"><button class="danger" onclick="window.delL3('${pI}','${l1I}','${l2I}','${data.id}')" ${dis}>×</button></div>
+                    <div class="cell col-btn"><button class="danger" onclick="window.delL3('${pI}','${data.id}')" ${dis}>×</button></div>
                     <div class="cell col-gouki"><div style="width:15px; height:15px; border-radius:50%; background:${statusColor};" title="${status}"></div></div>
                     <div class="cell col-prop"></div>
                     <div class="cell col-name"><div style="padding-left:45px;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${data.name}">${data.name}</div></div>
                     <div class="cell" style="flex:1; min-width:300px; display:flex; align-items:center; overflow-x:auto;">
                         ${dateInputs} ${addDateBtn}
                     </div>
-                    <div class="cell col-h" style="width:60px; flex:0 0 60px;">${(data.dates || []).filter(d => d).length}回</div>
-                    <div class="cell col-note"><input type="text" value="${data.note || ''}" onchange="upd('${data.id}','note',this.value,'l3','${pI}','${l1I}','${l2I}')" ${dis}></div>
+                    <div class="cell col-h" style="width:60px; flex:0 0 60px;"><input type="number" step="0.5" value="${data.planH || 0}" onchange="upd('${data.id}','planH',this.value,'l3','${pI}')" style="width:45px" ${dis}></div>
+                    <div class="cell col-h" style="width:60px; flex:0 0 60px;"><input type="number" step="0.5" value="${data.actH || 0}" onchange="upd('${data.id}','actH',this.value,'l3','${pI}')" style="width:45px" ${dis}></div>
+                    <div class="cell col-note"><input type="text" value="${data.note || ''}" onchange="upd('${data.id}','note',this.value,'l3','${pI}')" ${dis}></div>
                 `;
             }
             return { list, time };
@@ -1510,29 +1538,27 @@ function doGet(e) {
             if (!exp) {
                 state.properties.forEach(p => {
                     state.collapsedIds.add(p.id);
-                    (p.l1s || []).forEach(l1 => {
-                        state.collapsedIds.add(l1.id);
-                        (l1.l2s || []).forEach(l2 => state.collapsedIds.add(l2.id));
-                    });
+                    if (p.l1) state.collapsedIds.add(p.l1.id);
+                    if (p.l2) state.collapsedIds.add(p.l2.id);
                 });
             }
             saveToLocalStorage(); render();
         };
         window.changeZoom = (f) => { state.zoom = Math.max(0.3, Math.min(3.0, state.zoom * f)); saveToLocalStorage(); render(); };
 
-        window.upd = (id, k, v, lv, pI, l1I, l2I) => {
+        window.upd = (id, k, v, lv, pI) => {
             if (state.currentUser?.role === 'viewer') return;
+            const p = state.properties.find(x => x.id === (lv === 'p' ? id : pI));
+            if (!p) return;
+
             if (lv === 'p') {
-                const p = state.properties.find(x => x.id === id);
-                if (p) p[k] = v;
+                p[k] = v;
             } else if (lv === 'l1') {
-                const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === id);
-                if (l1) l1[k] = v;
+                if (p.l1) p.l1[k] = v;
             } else if (lv === 'l2') {
-                const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I), l2 = l1?.l2s.find(x => x.id === id);
-                if (l2) l2[k] = v;
+                if (p.l2) p.l2[k] = v;
             } else if (lv === 'l3') {
-                const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I), l2 = l1?.l2s.find(x => x.id === l2I), l3 = l2?.items.find(x => x.id === id);
+                const l3 = p.items.find(x => x.id === id);
                 if (l3) l3[k] = v;
             }
             saveToLocalStorage(); render();
@@ -1540,35 +1566,26 @@ function doGet(e) {
 
         window.addNewProperty = () => {
             if (state.currentUser?.role === 'viewer') return;
-            state.properties.push({ id: generateId(), name: state.masterProperties[0]?.name || "新規物件", l1s: [] });
-            saveToLocalStorage(); render();
-        };
-        window.addL1 = (pI) => {
-            const p = state.properties.find(x => x.id === pI);
-            if (p) {
-                if (!p.l1s) p.l1s = [];
-                p.l1s.push({ id: generateId(), name: state.masterL1[0] || "新規区分", l2s: [] });
-            }
-            saveToLocalStorage(); render();
-        };
-        window.addL2 = (pI, l1I) => {
-            const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I);
-            if (l1) {
-                if (!l1.l2s) l1.l2s = [];
-                l1.l2s.push({ id: generateId(), name: state.masterL2[0] || "新規機種", items: [] });
-            }
+            const today = formatDate(new Date());
+            state.properties.push({
+                id: generateId(),
+                name: state.masterProperties[0]?.name || "新規物件",
+                l1: { id: generateId(), name: state.masterL1[0], start: today, end: today },
+                l2: { id: generateId(), name: state.masterL2[0], start: today, end: today },
+                items: []
+            });
             saveToLocalStorage(); render();
         };
 
-        window.updL3Date = (pI, l1I, l2I, l3I, idx, v) => {
-            const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I), l2 = l1?.l2s.find(x => x.id === l2I), l3 = l2?.items.find(x => x.id === l3I);
+        window.updL3Date = (pI, l3I, idx, v) => {
+            const p = state.properties.find(x => x.id === pI), l3 = p?.items?.find(x => x.id === l3I);
             if (l3 && l3.dates) {
                 l3.dates[idx] = v;
                 saveToLocalStorage(); render();
             }
         };
-        window.addL3Date = (pI, l1I, l2I, l3I) => {
-            const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I), l2 = l1?.l2s.find(x => x.id === l2I), l3 = l2?.items.find(x => x.id === l3I);
+        window.addL3Date = (pI, l3I) => {
+            const p = state.properties.find(x => x.id === pI), l3 = p?.items?.find(x => x.id === l3I);
             if (l3) {
                 if (!l3.dates) l3.dates = [];
                 if (l3.dates.length < 10) {
@@ -1579,13 +1596,11 @@ function doGet(e) {
         };
 
         window.delP = (id) => { if (confirm("物件を削除しますか？")) { state.properties = state.properties.filter(x => x.id !== id); saveToLocalStorage(); render(); } };
-        window.delL1 = (pI, id) => { if (confirm("物件区分を削除しますか？")) { const p = state.properties.find(x => x.id === pI); if (p) p.l1s = p.l1s.filter(x => x.id !== id); saveToLocalStorage(); render(); } };
-        window.delL2 = (pI, l1I, id) => { if (confirm("機種区分を削除しますか？")) { const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I); if (l1) l1.l2s = l1.l2s.filter(x => x.id !== id); saveToLocalStorage(); render(); } };
-        window.delL3 = (pI, l1I, l2I, id) => { if (confirm("工程を削除しますか？")) { const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I), l2 = l1?.l2s.find(x => x.id === l2I); if (l2) l2.items = l2.items.filter(x => x.id !== id); saveToLocalStorage(); render(); } };
+        window.delL3 = (pI, id) => { if (confirm("工程を削除しますか？")) { const p = state.properties.find(x => x.id === pI); if (p) p.items = p.items.filter(x => x.id !== id); saveToLocalStorage(); render(); } };
 
         let currentModalContext = null;
-        window.openItemModal = (pI, l1I, l2I) => {
-            currentModalContext = { pI, l1I, l2I };
+        window.openItemModal = (pI) => {
+            currentModalContext = { pI };
             const container = document.getElementById('modal-checklist-container');
             container.innerHTML = state.masterL3.map(item => `
                 <div class="checklist-item">
@@ -1602,14 +1617,14 @@ function doGet(e) {
 
         window.addSelectedItems = () => {
             if (!currentModalContext) return;
-            const { pI, l1I, l2I } = currentModalContext;
-            const p = state.properties.find(x => x.id === pI), l1 = p?.l1s.find(x => x.id === l1I), l2 = l1?.l2s.find(x => x.id === l2I);
-            if (!l2) return;
+            const { pI } = currentModalContext;
+            const p = state.properties.find(x => x.id === pI);
+            if (!p) return;
 
             const selected = Array.from(document.querySelectorAll('#modal-checklist-container input:checked')).map(cb => cb.dataset.name);
             selected.forEach(name => {
-                if (!l2.items) l2.items = [];
-                l2.items.push({ id: generateId(), name, dates: [], note: "" });
+                if (!p.items) p.items = [];
+                p.items.push({ id: generateId(), name, dates: [], note: "" });
             });
             saveToLocalStorage(); render(); closeItemModal();
         };
@@ -1626,14 +1641,10 @@ function doGet(e) {
 
         function getPriorityScore(p) {
             let score = 0;
-            (p.l1s || []).forEach(l1 => {
-                (l1.l2s || []).forEach(l2 => {
-                    (l2.items || []).forEach(l3 => {
-                        const status = getL3Status(l3);
-                        if (status === 'overdue') score += 10;
-                        else if (status === 'incomplete') score += 1;
-                    });
-                });
+            (p.items || []).forEach(l3 => {
+                const status = getL3Status(l3);
+                if (status === 'overdue') score += 10;
+                else if (status === 'incomplete') score += 1;
             });
             return score;
         }
@@ -1715,17 +1726,13 @@ function doGet(e) {
         }
 
         function saveData() {
-            const rows = [['L1_ID', 'Gouki', 'PropName', 'L2_ID', 'CatName', 'L3_ID', 'TaskName', 'Start', 'End', 'PlanH', 'ActH', 'Note']];
+            const rows = [['L1_ID', 'Gouki', 'PropName', 'PropNote', 'L1_Name', 'L1_Start', 'L1_End', 'L2_Name', 'L2_Start', 'L2_End', 'L3_Name', 'L3_Dates', 'L3_Note', 'L3_PlanH', 'L3_ActH']];
             state.properties.forEach(p => {
-                if (p.categories.length === 0) {
-                    rows.push([p.id, p.gouki, p.name, '', '', '', '', '', '', '', '', '']);
+                if (!p.items || p.items.length === 0) {
+                    rows.push([p.id, p.gouki || "", p.name, p.note || "", p.l1.name, p.l1.start, p.l1.end, p.l2.name, p.l2.start, p.l2.end, '', '', '', '', '']);
                 } else {
-                    p.categories.forEach(c => {
-                        if (c.tasks.length === 0) {
-                            rows.push([p.id, p.gouki, p.name, c.id, c.name, '', '', '', '', '', '', '']);
-                        } else {
-                            c.tasks.forEach(t => rows.push([p.id, p.gouki, p.name, c.id, c.name, t.id, t.name, t.start, t.end, t.planH, t.actH, t.note]));
-                        }
+                    p.items.forEach(t => {
+                        rows.push([p.id, p.gouki || "", p.name, p.note || "", p.l1.name, p.l1.start, p.l1.end, p.l2.name, p.l2.start, p.l2.end, t.name, (t.dates || []).join('|'), t.note || "", t.planH || 0, t.actH || 0]);
                     });
                 }
             });
@@ -1751,25 +1758,29 @@ function doGet(e) {
                 const rawLines = e.target.result.split(/\r?\n/).filter(l => l.trim());
                 if (rawLines.length < 2) return;
                 const lines = rawLines.slice(1).map(parseCSVLine);
-                const props = []; const pM = new Map(), cM = new Map();
+                const props = []; const pM = new Map();
                 lines.forEach(cols => {
-                    let pI, gk, pN, cI, cN, tI, tN, st, ed, pH, aH, nt;
-                    if (cols.length >= 12) [pI, gk, pN, cI, cN, tI, tN, st, ed, pH, aH, nt] = cols;
-                    else if (cols.length >= 9) { [gk, pN, cN, tN, st, ed, pH, aH, nt] = cols; pI = pN + "_" + gk; cI = cN; tI = tN; }
+                    let pI, gk, pN, pNt, l1N, l1S, l1E, l2N, l2S, l2E, l3N, l3D, l3Nt, l3P, l3A;
+                    if (cols.length >= 15) [pI, gk, pN, pNt, l1N, l1S, l1E, l2N, l2S, l2E, l3N, l3D, l3Nt, l3P, l3A] = cols;
+                    else if (cols.length >= 12) { [pI, gk, pN, , l1N, l1S, l1E, l2N, l2S, l2E, l3N, l3D, l3Nt, l3P, l3A] = cols; } // Handle variations if any
                     else return;
-                    if (!pN && !gk && !tN) return;
+
                     pI = pI || "P_" + generateId();
-                    if (!pM.has(pI)) { const p = { id: pI, gouki: gk || "", name: pN || "", categories: [] }; pM.set(pI, p); props.push(p); }
-                    const catName = cN || "(フォルダなし)";
-                    const catKey = pI + "_" + catName;
-                    if (!cM.has(catKey)) {
-                        const newC = { id: cI || "C_" + generateId(), name: catName, tasks: [] };
-                        cM.set(catKey, newC); pM.get(pI).categories.push(newC);
+                    if (!pM.has(pI)) {
+                        const p = {
+                            id: pI, gouki: gk || "", name: pN || "", note: pNt || "",
+                            l1: { id: generateId(), name: l1N || state.masterL1[0], start: normalizeDate(l1S), end: normalizeDate(l1E) },
+                            l2: { id: generateId(), name: l2N || state.masterL2[0], start: normalizeDate(l2S), end: normalizeDate(l2E) },
+                            items: []
+                        };
+                        pM.set(pI, p); props.push(p);
                     }
-                    if (tN) {
-                        const startNorm = normalizeDate(st);
-                        const endNorm = normalizeDate(ed);
-                        cM.get(catKey).tasks.push({ id: tI || "T_" + generateId(), name: tN, start: startNorm, end: endNorm, planH: parseFloat(pH) || 0, actH: parseFloat(aH) || 0, note: nt || "" });
+                    if (l3N) {
+                        const p = pM.get(pI);
+                        p.items.push({
+                            id: generateId(), name: l3N, dates: (l3D || "").split('|').filter(x => x),
+                            note: l3Nt || "", planH: parseFloat(l3P) || 0, actH: parseFloat(l3A) || 0
+                        });
                     }
                 });
                 if (props.length) { state.properties = props; state.collapsedIds.clear(); saveToLocalStorage(); render(); }
@@ -1778,6 +1789,22 @@ function doGet(e) {
 
         init();
     </script>
+
+    <!-- 工程追加モーダル -->
+    <div id="item-modal" class="modal-overlay">
+        <div class="modal-body">
+            <div class="modal-header">
+                <div class="modal-title">工程を選択して追加</div>
+                <button class="close-btn" onclick="closeItemModal()">×</button>
+            </div>
+            <div id="modal-checklist-container">
+                <!-- Checklist items injected by JS -->
+            </div>
+            <div style="margin-top:20px; text-align:right;">
+                <button class="primary" onclick="addSelectedItems()">選択した項目を追加</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
