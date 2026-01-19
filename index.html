@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工程表 V7.12 (安定版：全不具合修正)</title>
+    <style>
+        :root {
+            --zoom: 1.0;
+            --day-width: calc(30px * var(--zoom));
+            --header-h: calc(100px * var(--zoom));
+            --row-h: calc(52px * var(--zoom));
+            --font-size: calc(13px * var(--zoom));
+            --border-color: #cbd5e1;
+            --header-bg: #f8fafc;
+            --primary-color: #2563eb;
+            --prop-bg: #0f172a;
+            --prop-color: #ffffff;
+            --cat-bg: #e2e8f0;
+            --cat-color: #1e293b;
+            --list-viewport-w: 650px;
+
+            /* Individual Base Widths (Internal Column Resizing) */
+            --col-btn-base: 50px;
+            --col-gouki-base: 90px;
+            --col-prop-base: 140px;
+            --col-name-base: 240px;
+            --col-date-base: 150px;
+            --col-h-base: 75px;
+            --col-note-base: 180px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Meiryo", system-ui, sans-serif;
+            margin: 0;
+            padding: 10px;
+            color: #1e293b;
+            background: #f1f5f9;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-size: var(--font-size);
+        }
+
+        #main-app {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            width: 100%;
+            min-height: 0;
+            /* Important for internal scrolling */
+        }
+
+        .header-banner {
+            background: #0f172a;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-banner h1 {
+            font-size: 1.3rem;
+            margin: 0;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            margin-bottom: 10px;
+            flex-shrink: 0;
+            border: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: bold;
+        }
+
+        /* --- SCREENS --- */
+        #login-screen,
+        #master-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.9);
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #master-screen {
+            background: #f1f5f9;
+            flex-direction: column;
+            padding: 20px;
+            overflow: hidden;
+            /* Prevent body scroll */
+        }
+
+        #login-form {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            width: 350px;
+            text-align: center;
+        }
+
+        #login-form h2 {
+            margin-bottom: 20px;
+            color: #0f172a;
+        }
+
+        .m-container {
+            width: 1000px;
+            max-width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .m-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 30px 30px 30px;
+        }
+
+        .m-tabs {
+            display: flex;
+            gap: 20px;
+            padding: 0 30px;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 20px;
+            background: #fff;
+        }
+
+        .m-tab-btn {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            font-weight: bold;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+
+        .m-tab-btn.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .m-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            background: #fff;
+            z-index: 100;
+        }
+
+        .m-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .m-table th,
+        .m-table td {
+            border: 1px solid #cbd5e1;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .m-table th {
+            background: #f8fafc;
+        }
+
+        .permission-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .badge-admin {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-user {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-viewer {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .hidden-view {
+            display: none !important;
+        }
+
+        [disabled] {
+            opacity: 0.6;
+            cursor: not-allowed !important;
+        }
+
+        input,
+        select {
+            padding: 5px 8px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: inherit;
+        }
+
+        button {
+            padding: 6px 12px;
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: inherit;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        button.primary {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .gantt-wrapper {
+            flex: 1;
+            display: flex;
+            border: 1px solid var(--border-color);
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            min-height: 0;
+            /* Important for internal scrolling */
+        }
+
+        /* --- LEFT PANEL --- */
+        .gantt-list {
+            width: var(--list-viewport-w);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-right: 3px solid #475569;
+            z-index: 20;
+            background: white;
+            min-height: 0;
+            /* Important for internal scrolling */
+        }
+
+        .list-header-outer {
+            height: var(--header-h);
+            background: var(--header-bg);
+            border-bottom: 2px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .list-header-content {
+            display: flex;
+            width: fit-content;
+            height: 100%;
+        }
+
+        .list-body {
+            flex: 1;
+            overflow: auto;
+            width: 100%;
+            border-right: 1px solid #f1f5f9;
+            background: white;
+            cursor: auto;
+        }
+
+        /* --- RIGHT PANEL --- */
+        .gantt-timeline-panel {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+        }
+
+        .timeline-header {
+            height: var(--header-h);
+            background: var(--header-bg);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            /* Higher than bars (10) and milestones (12) */
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .header-row {
+            display: flex;
+            height: calc(100% / 3);
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .cell {
+            position: relative;
+            /* Fixed: For resizers and absolute elements */
+            padding: 2px 8px;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            flex: 0 0 auto;
+            min-width: 0;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .cell.header {
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.95em;
+            color: #475569;
+            background: var(--header-bg);
+            white-space: nowrap;
+        }
+
+        /* Timeline Header Cells */
+        .header-cell {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid var(--border-color);
+            flex-shrink: 0;
+            font-size: 0.9em;
+            color: #475569;
+            background: var(--header-bg);
+        }
+
+        .header-cell.day {
+            width: var(--day-width);
+            flex-direction: column;
+            font-size: 0.8em;
+            flex-shrink: 0;
+        }
+
+        /* Column Resizers inside Column Headers */
+        .col-resizer {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 5px;
+            cursor: col-resize;
+            z-index: 20;
+        }
+
+        .col-resizer:hover {
+            background: var(--primary-color);
+        }
+
+        /* ROWS */
+        .row-container {
+            display: flex;
+            border-bottom: 1px solid #e2e8f0;
+            min-height: var(--row-h);
+            align-items: stretch;
+            width: fit-content;
+            position: relative;
+            /* Fixed: Absolute bars need a relative parent */
+        }
+
+        .row-container.prop-row {
+            background: var(--prop-bg);
+            color: var(--prop-color);
+            font-weight: bold;
+        }
+
+        .row-container.cat-row {
+            background: var(--cat-bg);
+            color: var(--cat-color);
+            font-weight: 600;
+        }
+
+        .cell input,
+        .cell button {
+            max-width: 100%;
+            margin: 0;
+        }
+
+        .cell input {
+            width: 100%;
+            height: 80%;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: inherit;
+            padding: 0 4px;
+        }
+
+        /* Column Width Definitions (linked to base * zoom) */
+        .col-btn {
+            width: calc(var(--col-btn-base) * var(--zoom));
+            flex: 0 0 calc(var(--col-btn-base) * var(--zoom));
+            justify-content: center;
+        }
+
+        .col-gouki {
+            width: calc(var(--col-gouki-base) * var(--zoom));
+            flex: 0 0 calc(var(--col-gouki-base) * var(--zoom));
+        }
+
+        .col-prop {
+            width: calc(var(--col-prop-base) * var(--zoom));
+            flex: 0 0 calc(var(--col-prop-base) * var(--zoom));
+        }
+
+        .col-name {
+            width: calc(var(--col-name-base) * var(--zoom));
+            flex: 0 0 calc(var(--col-name-base) * var(--zoom));
+        }
+
+        .col-date {
+            width: calc(var(--col-date-base) * var(--zoom));
+            flex: 0 0 calc(var(--col-date-base) * var(--zoom));
+        }
+
+        .col-h {
+            width: calc(var(--col-h-base) * var(--zoom));
+            flex: 0 0 calc(var(--col-h-base) * var(--zoom));
+        }
+
+        .col-note {
+            width: calc(var(--col-note-base) * var(--zoom));
+            flex: 0 0 calc(var(--col-note-base) * var(--zoom));
+        }
+
+        .main-resizer {
+            width: 6px;
+            cursor: col-resize;
+            background: #cbd5e1;
+            z-index: 20;
+        }
+
+        .main-resizer:hover {
+            background: var(--primary-color);
+        }
+
+        /* Timeline and Bars */
+        .timeline-body {
+            position: relative;
+            width: fit-content;
+        }
+
+        .grid-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+
+        .task-bar {
+            position: absolute;
+            top: 25%;
+            height: 50%;
+            z-index: 10;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 4px;
+            color: white;
+            font-size: 0.85em;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            padding: 0 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: grab;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .task-bar.summary {
+            background: linear-gradient(135deg, #94a3b8, #475569);
+            opacity: 0.8;
+            height: 35%;
+            top: 32.5%;
+        }
+
+        .task-bar.prop {
+            background: linear-gradient(135deg, #fbbf24, #d97706);
+            height: 30%;
+            top: 35%;
+        }
+
+        .bar-handle {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+            cursor: ew-resize;
+        }
+
+        .bar-handle.left {
+            left: 0;
+        }
+
+        .bar-handle.right {
+            right: 0;
+        }
+
+        .holiday {
+            background-color: #fee2e2;
+        }
+
+        .saturday {
+            background-color: #e0f2fe;
+        }
+
+        .today-hl {
+            background-color: #fef3c7;
+            color: #d97706;
+        }
+
+        .today-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2.5px;
+            background: #f59e0b;
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        .folder-toggle {
+            cursor: pointer;
+            width: 20px;
+            display: inline-flex;
+            justify-content: center;
+        }
+
+        .folder-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Milestone (Diamond) styles */
+        .task-bar.milestone {
+            background: none;
+            box-shadow: none;
+            overflow: visible;
+            width: 0 !important;
+            padding: 0;
+            z-index: 12;
+        }
+
+        .task-bar.milestone::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 14px;
+            height: 14px;
+            background: linear-gradient(135deg, #ef4444, #b91c1c);
+            transform: translate(-50%, -50%) rotate(45deg);
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .milestone-label {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            white-space: nowrap;
+            color: #1e293b;
+            font-size: 0.85em;
+            font-weight: bold;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="login-screen"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.9); z-index:9999; align-items:center; justify-content:center;">
+        <div id="login-form">
+            <h2>Gantt Login</h2>
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="login-id" placeholder="社員番号 または メールアドレス" autofocus
+                    style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:6px; margin-bottom:10px;"
+                    onkeydown="if(event.key==='Enter') document.getElementById('login-pass').focus()">
+                <input type="password" id="login-pass" placeholder="パスワード (必須)"
+                    style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:6px; margin-bottom:10px;"
+                    onkeydown="if(event.key==='Enter') doLogin()">
+                <p id="login-error" style="color:#ef4444; font-size:0.85em; display:none;">ログイン情報が正しくありません</p>
+            </div>
+            <button class="primary" style="width:100%; padding:12px;" onclick="doLogin()">ログイン</button>
+            <p style="margin-top:20px; font-size:0.8em; color:#64748b;">管理者ID: admin / PW: fts2531de</p>
+        </div>
+    </div>
+
+    <div id="master-screen">
+        <div class="m-container">
+            <div class="m-header">
+                <h2>⚙️ マスタ管理</h2>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="importMasterCSV()"
+                        style="background:#10b981; color:white; border:none;">CSVインポート</button>
+                    <input type="file" id="m-csv-file" style="display:none;" onchange="handleMasterCSV(this)">
+                    <button onclick="switchView('gantt')">ガントチャートに戻る</button>
+                </div>
+            </div>
+
+            <div class="m-tabs">
+                <div id="tab-users" class="m-tab-btn active" onclick="switchMasterTab('users')">👤 ユーザー管理</div>
+                <div id="tab-props" class="m-tab-btn" onclick="switchMasterTab('props')">🏗️ 物件・号機マスタ</div>
+                <div id="tab-cloud" class="m-tab-btn" onclick="switchMasterTab('cloud')">☁️ クラウド同期</div>
+            </div>
+
+            <div class="m-content">
+                <div id="sec-users">
+                    <table class="m-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>名前</th>
+                                <th style="width:150px;">パスワード</th>
+                                <th>権限</th>
+                                <th style="width:80px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="m-user-list"></tbody>
+                    </table>
+                    <div
+                        style="display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; background:#f8fafc; padding:15px; border-radius:8px;">
+                        <input type="text" id="m-u-id" placeholder="ID" style="width:120px;">
+                        <input type="text" id="m-u-name" placeholder="氏名" style="width:120px;">
+                        <input type="text" id="m-u-pass" placeholder="PW" style="width:100px;">
+                        <select id="m-u-role">
+                            <option value="user">一般</option>
+                            <option value="viewer">閲覧</option>
+                            <option value="admin">管理者</option>
+                        </select>
+                        <button class="primary" onclick="addMUser()">ユーザー追加</button>
+                    </div>
+                </div>
+
+                <div id="sec-props" class="hidden-view">
+                    <table class="m-table">
+                        <thead>
+                            <tr>
+                                <th style="width:250px;">物件名</th>
+                                <th>選択可能な号機 (カンマ区切り)</th>
+                                <th style="width:80px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="m-prop-list"></tbody>
+                    </table>
+                    <div
+                        style="display:flex; gap:10px; flex-wrap:wrap; background:#f8fafc; padding:15px; border-radius:8px;">
+                        <input type="text" id="m-p-name" placeholder="新しい物件名" style="width:200px;">
+                        <input type="text" id="m-p-goukis" placeholder="号機リスト (例: 1号機,2号機)" style="flex:1">
+                        <button class="primary" onclick="addMProp()">マスタ追加</button>
+                    </div>
+                </div>
+
+                <div id="sec-cloud" class="hidden-view">
+                    <div style="background:#f8fafc; padding:20px; border-radius:8px; border:1px solid #e2e8f0;">
+                        <h3>☁️ Googleスプレッドシート連携設定</h3>
+                        <p style="font-size:0.9em; color:#64748b; margin-bottom:15px;">
+                            スプレッドシートをデータベースとして使用して、複数人でデータを共有できます。<br>
+                            発行されたGoogle Apps Scriptの「ウェブアプリURL」を入力してください。
+                        </p>
+                        <div style="display:flex; gap:10px; margin-bottom:10px;">
+                            <input type="text" id="m-cloud-url"
+                                placeholder="https://script.google.com/macros/s/.../exec" style="flex:1">
+                            <button class="primary" onclick="saveCloudSettings()">設定保存</button>
+                        </div>
+                        <div id="cloud-status" style="font-size:0.9em; color:#64748b;">
+                            未接続
+                        </div>
+                        <hr style="margin:20px 0; border:none; border-top:1px solid #e2e8f0;">
+                        <h4>🛠️ 設定手順</h4>
+                        <ol style="font-size:0.9em; line-height:1.6;">
+                            <li>Googleスプレッドシートを開き、「拡張機能」>「Apps Script」をクリック。</li>
+                            <li>以下のコードを貼り付けて保存。</li>
+                            <li>右上「デプロイ」>「新しいデプロイ」> 種類を「ウェブアプリ」に選択。</li>
+                            <li>「アクセスできるユーザー」を「全員」にしてデプロイ。</li>
+                            <li>発行されたURLを上記の入力欄に貼り付けて「設定保存」をクリック。</li>
+                        </ol>
+                        <textarea id="gas-code" readonly
+                            style="width:100%; height:150px; font-family:monospace; font-size:12px; padding:10px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; margin-top:10px;">
+function doPost(e) {
+  const contents = JSON.parse(e.postData.contents);
+  const type = contents.type; // 'save' or 'load'
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = spreadsheet.getSheets()[0];
+  
+  if (type === 'save') {
+    sheet.getRange(1, 1).setValue(JSON.stringify(contents.state));
+    return ContentService.createTextOutput(JSON.stringify({result: 'success'})).setMimeType(ContentService.MimeType.JSON);
+  } else if (type === 'load') {
+    const data = sheet.getRange(1, 1).getValue();
+    return ContentService.createTextOutput(JSON.stringify({result: 'success', data: data ? JSON.parse(data) : null})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput("GAS is running. Use POST for data operations.");
+}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden-view">
+        <div class="header-banner">
+            <h1>📅 工程表 <span style="font-size:0.6em; opacity:0.8; font-weight:normal;" id="version-label"></span></h1>
+            <div style="flex:1"></div>
+            <div id="user-info-area"
+                style="display:flex; align-items:center; gap:15px; font-size:0.9em; background:rgba(255,255,255,0.1); padding:5px 15px; border-radius:20px;">
+                <span id="current-user-display"></span>
+                <button id="master-btn" style="padding:4px 10px; display:none;"
+                    onclick="switchView('master')">マスタ管理</button>
+                <button style="padding:4px 10px; background:#ef4444; color:white; border:none;"
+                    onclick="doLogout()">ログアウト</button>
+            </div>
+        </div>
+        <div class="controls">
+            <div class="input-group">
+                <label>🔍 検索:</label>
+                <input type="text" id="search-box" placeholder="キーワード入力..." oninput="render()">
+            </div>
+            <div class="input-group">
+                <label>尺度:</label>
+                <button onclick="changeZoom(1.1)">＋</button>
+                <button onclick="changeZoom(0.9)">－</button>
+            </div>
+            <div class="input-group">
+                <label>期間:</label>
+                <input type="date" id="view-start" onchange="updateViewRange()"> ～ <input type="date" id="view-end"
+                    onchange="updateViewRange()">
+            </div>
+            <button onclick="toggleAll(false)">全て閉じる</button>
+            <button onclick="toggleAll(true)">全て開く</button>
+            <div style="flex:1"></div>
+            <button onclick="saveData()">💾 CSV保存</button>
+            <button onclick="document.getElementById('file-input').click()">📂 読込</button>
+            <input type="file" id="file-input" class="hidden" accept=".csv" onchange="loadData(event)">
+            <button class="primary" onclick="window.addNewProperty()">＋ 新規物件</button>
+        </div>
+
+        <div class="gantt-wrapper">
+            <div class="gantt-list" id="list-panel">
+                <div class="list-header-outer" id="list-header-outer">
+                    <div class="list-header-content row-container">
+                        <div class="cell header col-btn">削除</div>
+                        <div class="cell header col-gouki">号機<div class="col-resizer"
+                                onmousedown="initColResize(event, 'gouki')"></div>
+                        </div>
+                        <div class="cell header col-prop">物件名<div class="col-resizer"
+                                onmousedown="initColResize(event, 'prop')"></div>
+                        </div>
+                        <div class="cell header col-name">項目名<div class="col-resizer"
+                                onmousedown="initColResize(event, 'name')"></div>
+                        </div>
+                        <div class="cell header col-date">開始日<div class="col-resizer"
+                                onmousedown="initColResize(event, 'date')"></div>
+                        </div>
+                        <div class="cell header col-date">終了日<div class="col-resizer"
+                                onmousedown="initColResize(event, 'date')"></div>
+                        </div>
+                        <div class="cell header col-h">予定<div class="col-resizer"
+                                onmousedown="initColResize(event, 'h')">
+                            </div>
+                        </div>
+                        <div class="cell header col-h">実績<div class="col-resizer"
+                                onmousedown="initColResize(event, 'h')">
+                            </div>
+                        </div>
+                        <div class="cell header col-note">備考<div class="col-resizer"
+                                onmousedown="initColResize(event, 'note')"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="list-body" id="list-body"></div>
+            </div>
+
+            <div class="main-resizer" id="main-resizer"></div>
+
+            <div class="gantt-timeline-panel" id="timeline-panel">
+                <div class="timeline-header" id="timeline-header">
+                    <div id="header-years" class="header-row"></div>
+                    <div id="header-months" class="header-row"></div>
+                    <div id="header-days" class="header-row"></div>
+                </div>
+                <div class="timeline-body" id="timeline-body">
+                    <div class="grid-lines" id="grid-lines"></div>
+                    <div id="today-line" class="today-line"></div>
+                    <div id="rows-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let state = {
+            viewStart: null,
+            viewEnd: null,
+            zoom: 1.0,
+            properties: [],
+            collapsedIds: new Set(),
+            // Auth & Master Data
+            currentUser: null,
+            masterUsers: [
+                { id: 'admin', name: '管理者', role: 'admin', pass: 'fts2531de' },
+                { id: 'user', name: '一般ユーザー', role: 'user', pass: 'user' },
+                { id: 'viewer', name: '閲覧専用', role: 'viewer', pass: 'viewer' }
+            ],
+            masterProperties: [
+                { name: "サンプル物件A", goukis: ["1号機", "2号機"] },
+                { name: "サンプル物件B", goukis: ["1号機"] },
+                { name: "サンプル物件C", goukis: ["A号機", "B号機"] }
+            ],
+            // Cloud Sync
+            cloudUrl: '',
+            lastSync: null,
+            masterTab: 'users'
+        };
+
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+        const formatDate = (d) => {
+            if (!d || isNaN(d.getTime())) return "";
+            const y = d.getFullYear(), m = ('0' + (d.getMonth() + 1)).slice(-2), da = ('0' + d.getDate()).slice(-2);
+            return `${y}-${m}-${da}`;
+        };
+        const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+        const getDiffDays = (d1, d2) => Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+
+        const parseDate = (val) => {
+            if (!val) return null;
+            if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+            if (typeof val !== 'string') return null;
+            const d = new Date(val.replace(/\//g, '-'));
+            return isNaN(d.getTime()) ? null : d;
+        };
+
+        const normalizeDate = (val) => {
+            const d = parseDate(val);
+            return d ? formatDate(d) : "";
+        };
+
+        function init() {
+            const saved = loadFromLocalStorage();
+            if (saved) {
+                // Merge saved data into default state to handle schema changes
+                state = { ...state, ...saved };
+                // 既存ユーザーにパスワードがない場合の補完（移行措置）
+                state.masterUsers.forEach(u => {
+                    if (!u.pass) u.pass = (u.id === 'admin') ? 'fts2531de' : u.id;
+                });
+                // 物件マスタの形式変換（移行措置）
+                if (state.masterProperties && state.masterProperties.length > 0 && typeof state.masterProperties[0] === 'string') {
+                    state.masterProperties = state.masterProperties.map(p => ({ name: p, goukis: ["1号機"] }));
+                }
+                state.viewStart = parseDate(state.viewStart) || new Date();
+                state.viewEnd = parseDate(state.viewEnd) || new Date();
+                state.collapsedIds = new Set(state.collapsedIds || []);
+            } else {
+                const now = new Date();
+                state.viewStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                state.viewEnd = new Date(now.getFullYear(), now.getMonth() + 6, 0);
+                state.properties.push({ id: generateId(), name: state.masterProperties[0], gouki: "1号機", categories: [] });
+            }
+            document.getElementById('view-start').value = formatDate(state.viewStart);
+            document.getElementById('view-end').value = formatDate(state.viewEnd);
+            document.getElementById('version-label').textContent = document.title;
+
+            if (state.currentUser) {
+                switchView('gantt');
+            } else {
+                switchView('login');
+            }
+
+            setupScrollSync();
+            setupMainResizer();
+
+            if (state.cloudUrl) syncFromCloud();
+        }
+
+        // --- Auth & View Logic ---
+        function doLogin() {
+            const id = document.getElementById('login-id').value;
+            const pass = document.getElementById('login-pass').value;
+            const user = state.masterUsers.find(u => u.id === id && u.pass === pass);
+            if (user) {
+                state.currentUser = user;
+                document.getElementById('login-error').style.display = 'none';
+                saveToLocalStorage();
+                switchView('gantt');
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+            }
+        }
+
+        function doLogout() {
+            state.currentUser = null;
+            saveToLocalStorage();
+            switchView('login');
+        }
+
+        function switchView(v) {
+            document.getElementById('login-screen').style.display = (v === 'login') ? 'flex' : 'none';
+            document.getElementById('master-screen').style.display = (v === 'master') ? 'flex' : 'none';
+            document.getElementById('main-app').classList.toggle('hidden-view', v !== 'gantt' && v !== 'master');
+
+            if (v === 'gantt') render();
+            if (v === 'master') {
+                if (!state.masterTab) state.masterTab = 'users'; // Set default
+                renderMaster();
+            }
+        }
+
+        window.switchMasterTab = (t) => {
+            state.masterTab = t;
+            renderMaster();
+        };
+
+        function renderMaster() {
+            // Update Tab UI
+            document.querySelectorAll('.m-tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${state.masterTab}`).classList.add('active');
+
+            // Update Section UI
+            document.getElementById('sec-users').classList.toggle('hidden-view', state.masterTab !== 'users');
+            document.getElementById('sec-props').classList.toggle('hidden-view', state.masterTab !== 'props');
+            document.getElementById('sec-cloud').classList.toggle('hidden-view', state.masterTab !== 'cloud');
+
+            if (state.masterTab === 'users') {
+                const uBody = document.getElementById('m-user-list');
+                uBody.innerHTML = state.masterUsers.map(u => `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td><input type="text" value="${u.name}" onchange="updMUser('${u.id}','name',this.value)"></td>
+                        <td><input type="text" value="${u.pass}" onchange="updMUser('${u.id}','pass',this.value)"></td>
+                        <td>
+                            <select onchange="updMUser('${u.id}','role',this.value)">
+                                <option value="user" ${u.role === 'user' ? 'selected' : ''}>user</option>
+                                <option value="viewer" ${u.role === 'viewer' ? 'selected' : ''}>viewer</option>
+                                <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>admin</option>
+                            </select>
+                        </td>
+                        <td>${u.id !== 'admin' ? `<button class="danger" onclick="delMUser('${u.id}')">削除</button>` : ''}</td>
+                    </tr>
+                `).join('');
+            } else if (state.masterTab === 'props') {
+                const pBody = document.getElementById('m-prop-list');
+                pBody.innerHTML = state.masterProperties.map((p, i) => `
+                    <tr>
+                        <td><input type="text" value="${p.name}" onchange="updMProp(${i},'name',this.value)"></td>
+                        <td><input type="text" value="${(p.goukis || []).join(', ')}" onchange="updMProp(${i},'goukis',this.value)" style="width:100%"></td>
+                        <td><button class="danger" onclick="delMProp(${i})">削除</button></td>
+                    </tr>
+                `).join('');
+            } else if (state.masterTab === 'cloud') {
+                document.getElementById('m-cloud-url').value = state.cloudUrl || '';
+                const st = document.getElementById('cloud-status');
+                if (state.cloudUrl) {
+                    st.innerHTML = `接続先設定済み (最終同期: ${state.lastSync ? state.lastSync : '未同期'})<br>
+                                   <button onclick="syncFromCloud()" style="margin-top:5px; font-size:0.8em;">☁️ 今すぐクラウドから読み込む</button>
+                                   <button onclick="syncToCloud()" style="margin-top:5px; font-size:0.8em;">☁️ 今すぐクラウドへ保存する</button>`;
+                } else {
+                    st.innerText = '未接続';
+                }
+            }
+        }
+
+        window.saveCloudSettings = () => {
+            const url = document.getElementById('m-cloud-url').value;
+            state.cloudUrl = url;
+            saveToLocalStorage();
+            renderMaster();
+            alert('クラウド設定を保存しました');
+            if (url) syncFromCloud();
+        };
+
+        async function syncToCloud() {
+            if (!state.cloudUrl) return;
+            try {
+                const dataToSave = { ...state, collapsedIds: Array.from(state.collapsedIds) };
+                const resp = await fetch(state.cloudUrl, {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'save', state: dataToSave })
+                });
+                const res = await resp.json();
+                if (res.result === 'success') {
+                    state.lastSync = new Date().toLocaleString();
+                    saveToLocalStorage();
+                    renderMaster();
+                    console.log('Cloud sync success');
+                }
+            } catch (e) { console.error('Cloud sync failed', e); }
+        }
+
+        async function syncFromCloud() {
+            if (!state.cloudUrl) return;
+            try {
+                const resp = await fetch(state.cloudUrl, {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'load' })
+                });
+                const res = await resp.json();
+                if (res.result === 'success' && res.data) {
+                    const cloudState = res.data;
+                    state = { ...state, ...cloudState };
+                    state.viewStart = parseDate(state.viewStart) || new Date();
+                    state.viewEnd = parseDate(state.viewEnd) || new Date();
+                    state.collapsedIds = new Set(state.collapsedIds || []);
+                    state.lastSync = new Date().toLocaleString();
+                    saveToLocalStorage();
+                    render();
+                    if (document.getElementById('master-screen').style.display === 'flex') renderMaster();
+                    alert('クラウドからデータを読み込みました');
+                }
+            } catch (e) {
+                console.error('Cloud load failed', e);
+                alert('クラウドからの読み込みに失敗しました。URLが正しいか確認してください。');
+            }
+        }
+
+        window.updMUser = (id, k, v) => {
+            const u = state.masterUsers.find(x => x.id === id);
+            if (u) u[k] = v;
+            saveToLocalStorage();
+        };
+        window.updMProp = (i, k, v) => {
+            if (k === 'goukis') {
+                state.masterProperties[i].goukis = v.split(',').map(s => s.trim()).filter(s => s);
+            } else {
+                state.masterProperties[i][k] = v;
+            }
+            saveToLocalStorage();
+        };
+
+        window.addMUser = () => {
+            const id = document.getElementById('m-u-id').value,
+                name = document.getElementById('m-u-name').value,
+                pass = document.getElementById('m-u-pass').value,
+                role = document.getElementById('m-u-role').value;
+            if (!id || !name || !pass) return alert('ID、名前、パスワードを入力してください');
+            if (state.masterUsers.find(u => u.id === id)) return alert('既に使用されているIDです');
+            state.masterUsers.push({ id, name, pass, role });
+            saveToLocalStorage(); renderMaster();
+            document.getElementById('m-u-id').value = '';
+            document.getElementById('m-u-name').value = '';
+            document.getElementById('m-u-pass').value = '';
+        };
+        window.delMUser = (id) => { if (confirm('削除しますか？')) { state.masterUsers = state.masterUsers.filter(u => u.id !== id); saveToLocalStorage(); renderMaster(); } };
+        window.addMProp = () => {
+            const name = document.getElementById('m-p-name').value, goukisStr = document.getElementById('m-p-goukis').value;
+            if (!name) return;
+            const goukis = goukisStr.split(',').map(s => s.trim()).filter(s => s);
+            state.masterProperties.push({ name, goukis });
+            saveToLocalStorage(); renderMaster();
+            document.getElementById('m-p-name').value = '';
+            document.getElementById('m-p-goukis').value = '';
+        };
+
+        window.importMasterCSV = () => document.getElementById('m-csv-file').click();
+        window.handleMasterCSV = (input) => {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const lines = e.target.result.split(/\r?\n/).filter(l => l.trim());
+                if (lines.length === 0) return;
+                // ヘッダー判定とデータ投入
+                // 形式1: user,ID,Name,Pass,Role
+                // 形式2: prop,Name,Goukis(comma separated)
+                lines.forEach(line => {
+                    const parts = parseCSVLine(line);
+                    if (parts[0] === 'user' && parts.length >= 5) {
+                        const existing = state.masterUsers.find(u => u.id === parts[1]);
+                        if (existing) { existing.name = parts[2]; existing.pass = parts[3]; existing.role = parts[4]; }
+                        else { state.masterUsers.push({ id: parts[1], name: parts[2], pass: parts[3], role: parts[4] }); }
+                    } else if (parts[0] === 'prop' && parts.length >= 3) {
+                        const existing = state.masterProperties.find(p => p.name === parts[1]);
+                        const goukis = parts[2].split('|').map(s => s.trim()).filter(s => s); // CSV内は|区切りを想定
+                        if (existing) { existing.goukis = goukis; }
+                        else { state.masterProperties.push({ name: parts[1], goukis }); }
+                    }
+                });
+                saveToLocalStorage(); renderMaster();
+                alert('マスタをインポートしました');
+            };
+            reader.readAsText(file);
+            input.value = '';
+        };
+        window.delMProp = (i) => { if (confirm('削除しますか？')) { state.masterProperties.splice(i, 1); saveToLocalStorage(); renderMaster(); } };
+
+        function saveToLocalStorage() {
+            const dataToSave = { ...state, collapsedIds: Array.from(state.collapsedIds) };
+            localStorage.setItem('gantt_state', JSON.stringify(dataToSave));
+            if (state.cloudUrl) syncToCloud();
+        }
+
+        function loadFromLocalStorage() {
+            const json = localStorage.getItem('gantt_state');
+            if (!json) return null;
+            try { return JSON.parse(json); } catch (e) { return null; }
+        }
+
+        function calculateRollups(p) {
+            let pMin = null, pMax = null;
+            p.categories.forEach(c => {
+                let cMin = null, cMax = null;
+                c.tasks.forEach(t => {
+                    const st = parseDate(t.start), ed = parseDate(t.end);
+                    if (st && (!cMin || st < cMin)) cMin = st;
+                    if (ed && (!cMax || ed > cMax)) cMax = ed;
+                });
+                c.autoStart = formatDate(cMin);
+                c.autoEnd = formatDate(cMax);
+                if (cMin && (!pMin || cMin < pMin)) pMin = cMin;
+                if (cMax && (!pMax || cMax > pMax)) pMax = cMax;
+            });
+            p.autoStart = formatDate(pMin);
+            p.autoEnd = formatDate(pMax);
+        }
+
+        function render() {
+            if (!state.currentUser) return switchView('login');
+            document.documentElement.style.setProperty('--zoom', state.zoom);
+
+            // Update Top UI
+            document.getElementById('current-user-display').textContent = `👤 ${state.currentUser.name} (${state.currentUser.role})`;
+            document.getElementById('master-btn').style.display = state.currentUser.role === 'admin' ? 'block' : 'none';
+
+            renderHeader();
+            renderBody();
+        }
+
+        function renderHeader() {
+            const hY = document.getElementById('header-years'), hM = document.getElementById('header-months'), hD = document.getElementById('header-days');
+            const tH = document.getElementById('timeline-header');
+            hY.innerHTML = hM.innerHTML = hD.innerHTML = '';
+            const start = new Date(state.viewStart), end = new Date(state.viewEnd);
+            const dw = 30 * state.zoom;
+            const daysCount = getDiffDays(start, end) + 1, totalW = daysCount * dw;
+
+            tH.style.width = hY.style.width = hM.style.width = hD.style.width = totalW + 'px';
+            document.getElementById('timeline-body').style.width = totalW + 'px';
+
+            const gl = document.getElementById('grid-lines');
+            gl.style.background = `linear-gradient(90deg, #e2e8f0 1px, transparent 1px) 0 0 / ${dw}px 100%`;
+
+            let curY = -1, curM = -1, yC = null, mC = null, dY = 0, dM = 0;
+            const tStr = formatDate(new Date());
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                const y = d.getFullYear(), m = d.getMonth(), dS = formatDate(d);
+                if (y !== curY) { if (yC) yC.style.width = (dY * dw) + 'px'; yC = document.createElement('div'); yC.className = 'header-cell'; yC.textContent = y + '年'; hY.appendChild(yC); curY = y; dY = 0; } dY++;
+                if (m !== curM || y !== curY) { if (mC) mC.style.width = (dM * dw) + 'px'; mC = document.createElement('div'); mC.className = 'header-cell'; mC.textContent = (m + 1) + '月'; hM.appendChild(mC); curM = m; dM = 0; } dM++;
+                const dCell = document.createElement('div'); dCell.className = 'header-cell day'; const wd = d.getDay();
+                if (wd === 0) dCell.classList.add('holiday'); else if (wd === 6) dCell.classList.add('saturday');
+                if (dS === tStr) dCell.classList.add('today-hl');
+                dCell.innerHTML = `<span>${d.getDate()}</span><span style="font-size:0.7em">${['日', '月', '火', '水', '木', '金', '土'][wd]}</span>`;
+                dCell.style.width = dw + 'px'; hD.appendChild(dCell);
+            }
+            if (yC) yC.style.width = (dY * dw) + 'px'; if (mC) mC.style.width = (dM * dw) + 'px';
+
+            const tL = document.getElementById('today-line');
+            const now = new Date();
+            const startStr = formatDate(start);
+
+            if (tStr >= startStr && tStr <= formatDate(end)) {
+                tL.style.display = 'block';
+                // Calculate exact column index by counting days from start (Local)
+                const sTemp = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+                const nTemp = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const diffDays = Math.round((nTemp - sTemp) / (1000 * 60 * 60 * 24));
+                tL.style.left = (diffDays * dw) + 'px';
+            } else { tL.style.display = 'none'; }
+        }
+
+        function renderBody() {
+            const lB = document.getElementById('list-body'), tC = document.getElementById('rows-container');
+            lB.innerHTML = tC.innerHTML = '';
+            const query = document.getElementById('search-box').value.toLowerCase();
+
+            state.properties.forEach(p => {
+                calculateRollups(p);
+                const pMatch = p.name.toLowerCase().includes(query) || p.gouki.toLowerCase().includes(query);
+                const catMatches = p.categories.map(c => c.name.toLowerCase().includes(query) || c.tasks.some(t => t.name.toLowerCase().includes(query)));
+                if (!pMatch && !catMatches.includes(true) && query) return;
+
+                const isPCol = state.collapsedIds.has(p.id);
+                const pr = createRow('prop-row', p, 'p', p.id); lB.appendChild(pr.list); tC.appendChild(pr.time);
+                const pBar = createBar({ name: p.name, start: p.autoStart, end: p.autoEnd }, 'prop');
+                if (pBar) pr.time.appendChild(pBar);
+
+                if (!isPCol) {
+                    p.categories.forEach((c, idx) => {
+                        if (!pMatch && !catMatches[idx] && query) return;
+                        const isCCol = state.collapsedIds.has(c.id);
+                        const cr = createRow('cat-row', c, 'c', p.id); lB.appendChild(cr.list); tC.appendChild(cr.time);
+                        const cBar = createBar({ name: c.name, start: c.autoStart, end: c.autoEnd }, 'summary');
+                        if (cBar) cr.time.appendChild(cBar);
+                        if (!isCCol) {
+                            c.tasks.forEach(t => {
+                                if (!pMatch && !catMatches[idx] && !t.name.toLowerCase().includes(query) && query) return;
+                                const tr = createRow('task-row', t, 't', p.id, c.id); lB.appendChild(tr.list); tC.appendChild(tr.time);
+                                const tBar = createBar(t, ''); if (tBar) tr.time.appendChild(tBar);
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        function createRow(type, data, lv, pI, cI) {
+            const list = document.createElement('div'); list.className = `row-container ${type}`;
+            const time = document.createElement('div'); time.className = `row-container ${type}`;
+            const isCol = state.collapsedIds.has(data.id);
+            const toggleIcon = `<span class="folder-toggle ${isCol ? 'collapsed' : ''}" onclick="window.toggleCollapse('${data.id}')">▼</span>`;
+            const canEdit = state.currentUser?.role !== 'viewer';
+            const dis = canEdit ? '' : 'disabled';
+
+            if (lv === 'p') {
+                const curM = state.masterProperties.find(p => (p.name || p) === data.name) || state.masterProperties[0];
+                const optPropHtml = state.masterProperties.map(p => {
+                    const n = p.name || p;
+                    return `<option value="${n}" ${data.name === n ? 'selected' : ''}>${n}</option>`;
+                }).join('');
+                const gL = curM?.goukis || ["1号機"];
+                const optGoukiHtml = gL.map(g => `<option value="${g}" ${data.gouki === g ? 'selected' : ''}>${g}</option>`).join('');
+                list.innerHTML = `
+                    <div class="cell col-btn"><button class="danger" onclick="window.delP('${data.id}')" ${dis}>×</button></div>
+                    <div class="cell col-gouki"><select onchange="upd('${data.id}','gouki',this.value,'p')" ${dis}>${optGoukiHtml}</select></div>
+                    <div class="cell col-prop">${toggleIcon}<select onchange="upd('${data.id}','name',this.value,'p')" ${dis}>${optPropHtml}</select></div>
+                    <div class="cell col-name"><button class="primary" onclick="window.addC('${data.id}')" ${dis}>✙ フォルダ追加</button></div>
+                    <div class="cell col-date">${data.autoStart || ''}</div><div class="cell col-date">${data.autoEnd || ''}</div><div class="cell col-h"></div><div class="cell col-h"></div><div class="cell col-note"></div>
+                `;
+            } else if (lv === 'c') {
+                list.innerHTML = `
+                    <div class="cell col-btn"><button class="danger" onclick="window.delC('${pI}','${data.id}')" ${dis}>×</button></div>
+                    <div class="cell col-gouki"></div><div class="cell col-prop"></div>
+                    <div class="cell col-name"><div style="padding-left:15px;display:flex;align-items:center;width:100%">${toggleIcon}<input type="text" value="${data.name}" onchange="upd('${data.id}','name',this.value,'c','${pI}')" ${dis}><button onclick="window.addT('${pI}','${data.id}')" style="margin-left:5px" ${dis}>＋工程</button></div></div>
+                    <div class="cell col-date">${data.autoStart || ''}</div><div class="cell col-date">${data.autoEnd || ''}</div><div class="cell col-h"></div><div class="cell col-h"></div><div class="cell col-note"></div>
+                `;
+            } else {
+                list.innerHTML = `
+                    <div class="cell col-btn"><button class="danger" onclick="window.delT('${pI}','${cI}','${data.id}')" ${dis}>×</button></div>
+                    <div class="cell col-gouki"></div><div class="cell col-prop"></div>
+                    <div class="cell col-name"><div style="padding-left:35px;width:100%"><input type="text" value="${data.name}" onchange="upd('${data.id}','name',this.value,'t','${pI}','${cI}')" ${dis}></div></div>
+                    <div class="cell col-date"><input type="date" value="${data.start}" onchange="upd('${data.id}','start',this.value,'t','${pI}','${cI}')" ${dis}></div>
+                    <div class="cell col-date"><input type="date" value="${data.end}" onchange="upd('${data.id}','end',this.value,'t','${pI}','${cI}')" ${dis}></div>
+                    <div class="cell col-h"><input type="number" value="${data.planH}" step="0.5" onchange="upd('${data.id}','planH',this.value,'t','${pI}','${cI}')" ${dis}></div>
+                    <div class="cell col-h"><input type="number" value="${data.actH}" step="0.5" onchange="upd('${data.id}','actH',this.value,'t','${pI}','${cI}')" ${dis}></div>
+                    <div class="cell col-note"><input type="text" value="${data.note}" onchange="upd('${data.id}','note',this.value,'t','${pI}','${cI}')" ${dis}></div>
+                `;
+            }
+            return { list, time };
+        }
+
+        function createBar(t, cls) {
+            const vS = parseDate(state.viewStart), tS = parseDate(t.start), tE = parseDate(t.end);
+            if (!vS || (!tS && !tE)) return null;
+
+            const dw = 30 * state.zoom;
+            const bar = document.createElement('div');
+
+            // Detection logic: Milestone if only one date or both same day
+            const isMilestone = !cls && (!tS || !tE || getDiffDays(tS, tE) === 0);
+
+            if (isMilestone) {
+                const targetDate = tS || tE;
+                bar.className = `task-bar milestone`;
+                bar.style.left = (getDiffDays(vS, targetDate) * dw + (dw / 2)) + 'px';
+
+                const lbl = document.createElement('span');
+                lbl.className = 'milestone-label';
+                lbl.innerText = t.name || "";
+                bar.appendChild(lbl);
+            } else {
+                if (!tS || !tE || tE < tS) return null;
+                bar.className = `task-bar ${cls}`;
+                bar.style.left = (getDiffDays(vS, tS) * dw) + 'px';
+                bar.style.width = ((getDiffDays(tS, tE) + 1) * dw) + 'px';
+                bar.innerText = t.name || "";
+
+                if (!cls) {
+                    bar.onmousedown = (e) => initBarDrag(e, t, 'move');
+                    const hL = document.createElement('div'); hL.className = 'bar-handle left'; hL.onmousedown = (e) => { e.stopPropagation(); initBarDrag(e, t, 'left'); };
+                    const hR = document.createElement('div'); hR.className = 'bar-handle right'; hR.onmousedown = (e) => { e.stopPropagation(); initBarDrag(e, t, 'right'); };
+                    bar.appendChild(hL); bar.appendChild(hR);
+                }
+            }
+            return bar;
+        }
+
+        window.initColResize = (e, key) => {
+            e.stopPropagation();
+            let sX = e.clientX;
+            let iW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue(`--col-${key}-base`));
+            const mv = (me) => {
+                const diff = (me.clientX - sX) / state.zoom;
+                document.documentElement.style.setProperty(`--col-${key}-base`, (iW + diff) + 'px');
+            };
+            const up = () => { window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up); };
+            window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up);
+        };
+
+        window.toggleCollapse = (id) => { if (state.collapsedIds.has(id)) state.collapsedIds.delete(id); else state.collapsedIds.add(id); saveToLocalStorage(); render(); };
+        window.toggleAll = (exp) => { state.collapsedIds.clear(); if (!exp) { state.properties.forEach(p => { state.collapsedIds.add(p.id); p.categories.forEach(c => state.collapsedIds.add(c.id)); }); } saveToLocalStorage(); render(); };
+        window.changeZoom = (f) => { state.zoom = Math.max(0.3, Math.min(3.0, state.zoom * f)); saveToLocalStorage(); render(); };
+
+        window.upd = (id, k, v, lv, pI, cI) => {
+            if (state.currentUser?.role === 'viewer') return;
+            if (lv === 'p') {
+                const p = state.properties.find(x => x.id === id);
+                if (p) {
+                    p[k] = v;
+                    // 物件名が変更された場合、号機をその物件の最初の選択肢に自動更新する
+                    if (k === 'name') {
+                        const mProp = state.masterProperties.find(mp => mp.name === v);
+                        if (mProp && mProp.goukis && mProp.goukis.length > 0) {
+                            p.gouki = mProp.goukis[0];
+                        }
+                    }
+                }
+            }
+            else if (lv === 'c') { const p = state.properties.find(x => x.id === pI), c = p?.categories.find(x => x.id === id); if (c) c[k] = v; }
+            else { const p = state.properties.find(x => x.id === pI), c = p?.categories.find(x => x.id === cI), t = c?.tasks.find(x => x.id === id); if (t) { if (k === 'planH' || k === 'actH') v = parseFloat(v) || 0; t[k] = v; } }
+            saveToLocalStorage();
+            render();
+        };
+
+        window.addNewProperty = () => {
+            if (state.currentUser?.role === 'viewer') return;
+            state.properties.push({ id: generateId(), name: state.masterProperties[0] || "新規物件", gouki: "1号機", categories: [] });
+            saveToLocalStorage(); render();
+        };
+        window.addC = (pI) => { if (state.currentUser?.role === 'viewer') return; const p = state.properties.find(x => x.id === pI); if (p) p.categories.push({ id: generateId(), name: "カテゴリ", tasks: [] }); saveToLocalStorage(); render(); };
+        window.addT = (pI, cI) => { if (state.currentUser?.role === 'viewer') return; const p = state.properties.find(x => x.id === pI), c = p?.categories.find(x => x.id === cI); if (c) c.tasks.push({ id: generateId(), name: "新規工程", start: formatDate(new Date()), end: formatDate(new Date()), planH: 0, actH: 0, note: "" }); saveToLocalStorage(); render(); };
+
+        window.delP = (id) => { if (state.currentUser?.role === 'viewer') return; if (confirm("物件を削除しますか？")) { state.properties = state.properties.filter(x => x.id !== id); saveToLocalStorage(); render(); } };
+        window.delC = (pI, cI) => { if (state.currentUser?.role === 'viewer') return; if (confirm("フォルダを削除しますか？")) { const p = state.properties.find(x => x.id === pI); if (p) p.categories = p.categories.filter(x => x.id !== cI); saveToLocalStorage(); render(); } };
+        window.delT = (pI, cI, tI) => { if (state.currentUser?.role === 'viewer') return; if (confirm("工程を削除しますか？")) { const p = state.properties.find(x => x.id === pI), c = p?.categories.find(x => x.id === cI); if (c) c.tasks = c.tasks.filter(x => x.id !== tI); saveToLocalStorage(); render(); } };
+
+        function updateViewRange() { state.viewStart = new Date(document.getElementById('view-start').value); state.viewEnd = new Date(document.getElementById('view-end').value); saveToLocalStorage(); render(); }
+
+        function setupScrollSync() {
+            const lb = document.getElementById('list-body'), lho = document.getElementById('list-header-outer'), tp = document.getElementById('timeline-panel');
+            lb.onscroll = () => { tp.scrollTop = lb.scrollTop; lho.scrollLeft = lb.scrollLeft; };
+            tp.onscroll = () => { lb.scrollTop = tp.scrollTop; };
+            let isDown = false, sX, sY, sl, st;
+            lb.addEventListener('mousedown', (e) => {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.classList.contains('col-resizer')) return;
+                isDown = true; lb.style.cursor = 'grabbing';
+                sX = e.pageX - lb.offsetLeft; sY = e.pageY - lb.offsetTop;
+                sl = lb.scrollLeft; st = lb.scrollTop;
+            });
+            window.addEventListener('mouseup', () => { if (isDown) { isDown = false; lb.style.cursor = 'auto'; } });
+            window.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                const x = e.pageX - lb.offsetLeft; const y = e.pageY - lb.offsetTop;
+                lb.scrollLeft = sl - (x - sX) * 1.5;
+                lb.scrollTop = st - (y - sY) * 1.5;
+            });
+        }
+
+        function setupMainResizer() {
+            const r = document.getElementById('main-resizer');
+            let isD = false;
+            r.onmousedown = (e) => { isD = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; e.preventDefault(); };
+            window.addEventListener('mousemove', (e) => {
+                if (!isD) return;
+                const rect = document.querySelector('.gantt-wrapper').getBoundingClientRect();
+                document.documentElement.style.setProperty('--list-viewport-w', (e.clientX - rect.left) + 'px');
+            });
+            window.addEventListener('mouseup', () => { isD = false; document.body.style.cursor = ''; document.body.style.userSelect = 'auto'; });
+        }
+
+        function initBarDrag(e, t, m) {
+            if (state.currentUser?.role === 'viewer') return;
+            let sX = e.clientX, iS = new Date(t.start), iE = new Date(t.end);
+            const dw = 30 * state.zoom;
+            function mv(me) {
+                const d = Math.round((me.clientX - sX) / dw); if (d === 0) return;
+                if (m === 'move') { const ns = addDays(iS, d), dr = getDiffDays(iS, iE); t.start = formatDate(ns); t.end = formatDate(addDays(ns, dr)); }
+                else if (m === 'left') { const ns = addDays(iS, d); if (ns <= new Date(t.end)) t.start = formatDate(ns); }
+                else { const ne = addDays(iE, d); if (ne >= new Date(t.start)) t.end = formatDate(ne); }
+                render();
+            }
+            function up() { window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up); }
+            window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up);
+        }
+
+        function saveData() {
+            const rows = [['L1_ID', 'Gouki', 'PropName', 'L2_ID', 'CatName', 'L3_ID', 'TaskName', 'Start', 'End', 'PlanH', 'ActH', 'Note']];
+            state.properties.forEach(p => {
+                if (p.categories.length === 0) {
+                    rows.push([p.id, p.gouki, p.name, '', '', '', '', '', '', '', '', '']);
+                } else {
+                    p.categories.forEach(c => {
+                        if (c.tasks.length === 0) {
+                            rows.push([p.id, p.gouki, p.name, c.id, c.name, '', '', '', '', '', '', '']);
+                        } else {
+                            c.tasks.forEach(t => rows.push([p.id, p.gouki, p.name, c.id, c.name, t.id, t.name, t.start, t.end, t.planH, t.actH, t.note]));
+                        }
+                    });
+                }
+            });
+            const csv = "\uFEFF" + rows.map(r => r.map(c => `"${(c || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `gantt_schedule_${new Date().getTime()}.csv`; link.click();
+        }
+
+        function parseCSVLine(line) {
+            const result = []; let cur = '', inQ = false;
+            for (let i = 0; i < line.length; i++) {
+                const c = line[i];
+                if (c === '"') { if (inQ && line[i + 1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+                else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+                else cur += c;
+            }
+            result.push(cur.trim()); return result;
+        }
+
+        function loadData(ev) {
+            const f = ev.target.files[0]; if (!f) return;
+            const r = new FileReader(); r.onload = (e) => {
+                const rawLines = e.target.result.split(/\r?\n/).filter(l => l.trim());
+                if (rawLines.length < 2) return;
+                const lines = rawLines.slice(1).map(parseCSVLine);
+                const props = []; const pM = new Map(), cM = new Map();
+                lines.forEach(cols => {
+                    let pI, gk, pN, cI, cN, tI, tN, st, ed, pH, aH, nt;
+                    if (cols.length >= 12) [pI, gk, pN, cI, cN, tI, tN, st, ed, pH, aH, nt] = cols;
+                    else if (cols.length >= 9) { [gk, pN, cN, tN, st, ed, pH, aH, nt] = cols; pI = pN + "_" + gk; cI = cN; tI = tN; }
+                    else return;
+                    if (!pN && !gk && !tN) return;
+                    pI = pI || "P_" + generateId();
+                    if (!pM.has(pI)) { const p = { id: pI, gouki: gk || "", name: pN || "", categories: [] }; pM.set(pI, p); props.push(p); }
+                    const catName = cN || "(フォルダなし)";
+                    const catKey = pI + "_" + catName;
+                    if (!cM.has(catKey)) {
+                        const newC = { id: cI || "C_" + generateId(), name: catName, tasks: [] };
+                        cM.set(catKey, newC); pM.get(pI).categories.push(newC);
+                    }
+                    if (tN) {
+                        const startNorm = normalizeDate(st);
+                        const endNorm = normalizeDate(ed);
+                        cM.get(catKey).tasks.push({ id: tI || "T_" + generateId(), name: tN, start: startNorm, end: endNorm, planH: parseFloat(pH) || 0, actH: parseFloat(aH) || 0, note: nt || "" });
+                    }
+                });
+                if (props.length) { state.properties = props; state.collapsedIds.clear(); saveToLocalStorage(); render(); }
+            }; r.readAsText(f);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
