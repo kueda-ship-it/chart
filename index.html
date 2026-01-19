@@ -725,17 +725,22 @@
                         <textarea id="gas-code" readonly
                             style="width:100%; height:150px; font-family:monospace; font-size:12px; padding:10px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; margin-top:10px;">
 function doPost(e) {
-  const contents = JSON.parse(e.postData.contents);
-  const type = contents.type; // 'save' or 'load'
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = spreadsheet.getSheets()[0];
-  
-  if (type === 'save') {
-    sheet.getRange(1, 1).setValue(JSON.stringify(contents.state));
-    return ContentService.createTextOutput(JSON.stringify({result: 'success'})).setMimeType(ContentService.MimeType.JSON);
-  } else if (type === 'load') {
-    const data = sheet.getRange(1, 1).getValue();
-    return ContentService.createTextOutput(JSON.stringify({result: 'success', data: data ? JSON.parse(data) : null})).setMimeType(ContentService.MimeType.JSON);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const contents = JSON.parse(e.postData.contents);
+    const type = contents.type; 
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = spreadsheet.getSheets()[0];
+    if (type === 'save') {
+      sheet.getRange(1, 1).setValue(JSON.stringify(contents.state));
+      return ContentService.createTextOutput(JSON.stringify({result: 'success'})).setMimeType(ContentService.MimeType.JSON);
+    } else if (type === 'load') {
+      const data = sheet.getRange(1, 1).getValue();
+      return ContentService.createTextOutput(JSON.stringify({result: 'success', data: data ? JSON.parse(data) : null})).setMimeType(ContentService.MimeType.JSON);
+    }
+  } finally {
+    lock.releaseLock();
   }
 }
 
@@ -858,7 +863,7 @@ function doGet(e) {
                 { name: "サンプル物件C", goukis: ["A号機", "B号機"] }
             ],
             // Cloud Sync
-            cloudUrl: '',
+            cloudUrl: '', // 【管理者向け】ここにGASのウェブアプリURLを貼ると、全ユーザーで共有設定になります。
             lastSync: null,
             masterTab: 'users'
         };
@@ -1047,7 +1052,9 @@ function doGet(e) {
                 const res = await resp.json();
                 if (res.result === 'success' && res.data) {
                     const cloudState = res.data;
+                    const currentUrl = state.cloudUrl; // 現在の接続先を保持
                     state = { ...state, ...cloudState };
+                    state.cloudUrl = currentUrl; // 接続先設定が空データなどで上書きされるのを防ぐ
                     state.viewStart = parseDate(state.viewStart) || new Date();
                     state.viewEnd = parseDate(state.viewEnd) || new Date();
                     state.collapsedIds = new Set(state.collapsedIds || []);
