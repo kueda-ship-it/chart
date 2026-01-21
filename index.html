@@ -10,9 +10,9 @@
             --zoom: 1.0;
             --day-width: calc(30px * var(--zoom));
             --header-h: calc(100px * var(--zoom));
-            --row-h: calc(52px * var(--zoom));
-            --font-size: calc(13px * var(--zoom));
-            --border-color: #cbd5e1;
+            --row-h: calc(58px * var(--zoom));
+            --font-size: calc(15px * var(--zoom));
+            --border-color: #94a3b8;
             --header-bg: #f8fafc;
             --primary-color: #2563eb;
             --prop-bg: #0f172a;
@@ -38,14 +38,15 @@
         body {
             font-family: "Meiryo", system-ui, sans-serif;
             margin: 0;
-            padding: 10px;
-            color: #1e293b;
+            padding: 12px;
+            color: #0f172a;
             background: #f1f5f9;
             height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
             font-size: var(--font-size);
+            line-height: 1.6;
         }
 
         #main-app {
@@ -61,43 +62,45 @@
         .header-banner {
             background: #0f172a;
             color: white;
-            padding: 12px 20px;
+            padding: 16px 24px;
             display: flex;
             align-items: center;
-            border-radius: 10px;
-            margin-bottom: 10px;
+            border-radius: 12px;
+            margin-bottom: 12px;
             flex-shrink: 0;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
         .header-banner h1 {
-            font-size: 1.3rem;
+            font-size: 1.5rem;
             margin: 0;
             color: white;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            font-weight: 700;
         }
 
         .controls {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             align-items: center;
             background: white;
-            padding: 10px 15px;
-            border-radius: 10px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            margin-bottom: 10px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            margin-bottom: 12px;
             flex-shrink: 0;
-            border: 1px solid #e2e8f0;
+            border: 2px solid #e2e8f0;
             flex-wrap: wrap;
         }
 
         .input-group {
             display: flex;
             align-items: center;
-            gap: 5px;
-            font-weight: bold;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 1.05em;
         }
 
         /* --- SCREENS --- */
@@ -125,16 +128,18 @@
 
         #login-form {
             background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-            width: 350px;
+            padding: 48px;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            width: 400px;
             text-align: center;
         }
 
         #login-form h2 {
-            margin-bottom: 20px;
+            margin-bottom: 28px;
             color: #0f172a;
+            font-size: 1.8em;
+            font-weight: 700;
         }
 
         .m-container {
@@ -165,17 +170,24 @@
         }
 
         .m-tab-btn {
-            padding: 12px 20px;
+            padding: 14px 24px;
             cursor: pointer;
             border-bottom: 3px solid transparent;
-            font-weight: bold;
+            font-weight: 700;
+            font-size: 1.05em;
             color: #64748b;
             transition: all 0.2s;
+        }
+
+        .m-tab-btn:hover {
+            color: var(--primary-color);
+            background: #f8fafc;
         }
 
         .m-tab-btn.active {
             color: var(--primary-color);
             border-bottom-color: var(--primary-color);
+            background: #f8fafc;
         }
 
         .m-header {
@@ -196,19 +208,22 @@
         .m-table th,
         .m-table td {
             border: 1px solid #cbd5e1;
-            padding: 12px;
+            padding: 14px 16px;
             text-align: left;
         }
 
         .m-table th {
             background: #f8fafc;
+            font-weight: 700;
+            font-size: 1.05em;
+            color: #1e293b;
         }
 
         .permission-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.85em;
-            font-weight: bold;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: 700;
         }
 
         .badge-admin {
@@ -237,29 +252,74 @@
 
         input,
         select {
-            padding: 5px 8px;
-            border: 1.5px solid #cbd5e1;
-            border-radius: 6px;
+            padding: 10px 14px;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
             font-size: inherit;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        input:hover,
+        select:hover {
+            border-color: #94a3b8;
         }
 
         button {
-            padding: 6px 12px;
-            border: 1px solid #cbd5e1;
+            padding: 10px 18px;
+            border: 2px solid #cbd5e1;
             background: #fff;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: inherit;
             font-weight: 600;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
+            transition: all 0.2s ease;
+            min-height: 42px;
+        }
+
+        button:hover {
+            background: #f8fafc;
+            border-color: var(--primary-color);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        button:active {
+            transform: translateY(0);
         }
 
         button.primary {
             background: var(--primary-color);
             color: white;
             border-color: var(--primary-color);
+        }
+
+        button.primary:hover {
+            background: #1d4ed8;
+            border-color: #1d4ed8;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        button.danger {
+            background: #ef4444;
+            color: white;
+            border-color: #ef4444;
+        }
+
+        button.danger:hover {
+            background: #dc2626;
+            border-color: #dc2626;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
         }
 
         .gantt-wrapper {
@@ -335,7 +395,7 @@
         .cell {
             position: relative;
             /* Fixed: For resizers and absolute elements */
-            padding: 2px 8px;
+            padding: 6px 12px;
             border-right: 1px solid var(--border-color);
             display: flex;
             align-items: center;
@@ -347,9 +407,9 @@
 
         .cell.header {
             justify-content: center;
-            font-weight: bold;
-            font-size: 0.95em;
-            color: #475569;
+            font-weight: 700;
+            font-size: 1em;
+            color: #1e293b;
             background: var(--header-bg);
             white-space: nowrap;
         }
@@ -362,15 +422,16 @@
             justify-content: center;
             border-right: 1px solid var(--border-color);
             flex-shrink: 0;
-            font-size: 0.9em;
-            color: #475569;
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #1e293b;
             background: var(--header-bg);
         }
 
         .header-cell.day {
             width: var(--day-width);
             flex-direction: column;
-            font-size: 0.8em;
+            font-size: 0.85em;
             flex-shrink: 0;
         }
 
@@ -380,13 +441,15 @@
             right: 0;
             top: 0;
             bottom: 0;
-            width: 5px;
+            width: 6px;
             cursor: col-resize;
             z-index: 20;
+            transition: all 0.2s ease;
         }
 
         .col-resizer:hover {
             background: var(--primary-color);
+            width: 8px;
         }
 
         /* ROWS */
@@ -420,11 +483,18 @@
 
         .cell input {
             width: 100%;
-            height: 80%;
-            border: 1px solid #e2e8f0;
-            border-radius: 4px;
+            height: 85%;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
             font-size: inherit;
-            padding: 0 4px;
+            padding: 4px 8px;
+            transition: all 0.2s ease;
+        }
+
+        .cell input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
         }
 
         /* Column Width Definitions (linked to base * zoom) */
@@ -465,14 +535,16 @@
         }
 
         .main-resizer {
-            width: 6px;
+            width: 8px;
             cursor: col-resize;
             background: #cbd5e1;
             z-index: 20;
+            transition: all 0.2s ease;
         }
 
         .main-resizer:hover {
             background: var(--primary-color);
+            width: 10px;
         }
 
         /* Timeline and Bars */
@@ -496,17 +568,23 @@
             height: 50%;
             z-index: 10;
             background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-            border-radius: 4px;
+            border-radius: 6px;
             color: white;
-            font-size: 0.85em;
+            font-size: 0.9em;
             font-weight: 700;
             display: flex;
             align-items: center;
-            padding: 0 6px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 0 8px;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
             cursor: grab;
             white-space: nowrap;
             overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .task-bar:hover {
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transform: translateY(-1px);
         }
 
         .task-bar.summary {
@@ -563,9 +641,18 @@
 
         .folder-toggle {
             cursor: pointer;
-            width: 20px;
+            width: 24px;
+            height: 24px;
             display: inline-flex;
             justify-content: center;
+            align-items: center;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-size: 1.1em;
+        }
+
+        .folder-toggle:hover {
+            background: rgba(37, 99, 235, 0.1);
         }
 
         .folder-toggle.collapsed {
@@ -627,32 +714,56 @@
 
         .modal-body {
             background: white;
-            padding: 25px;
-            border-radius: 12px;
-            width: 400px;
+            padding: 30px;
+            border-radius: 16px;
+            width: 450px;
             max-width: 90%;
             max-height: 80%;
             overflow-y: auto;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
         }
 
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .close-btn {
+            width: 32px;
+            height: 32px;
+            font-size: 1.5em;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .checklist-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 8px;
+            gap: 12px;
+            padding: 12px;
             border-bottom: 1px solid #f1f5f9;
+            transition: all 0.2s ease;
         }
 
         .checklist-item:hover {
             background: #f8fafc;
+            padding-left: 16px;
+        }
+
+        .checklist-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -663,16 +774,16 @@
         style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.9); z-index:9999; align-items:center; justify-content:center;">
         <div id="login-form">
             <h2>Gantt Login</h2>
-            <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 24px;">
                 <input type="text" id="login-id" placeholder="社員番号 または メールアドレス" autofocus
-                    style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:6px; margin-bottom:10px;"
+                    style="width:100%; padding:14px 16px; border:2px solid #cbd5e1; border-radius:8px; margin-bottom:12px; font-size:1em;"
                     onkeydown="if(event.key==='Enter') document.getElementById('login-pass').focus()">
                 <input type="password" id="login-pass" placeholder="パスワード (必須)"
-                    style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:6px; margin-bottom:10px;"
+                    style="width:100%; padding:14px 16px; border:2px solid #cbd5e1; border-radius:8px; margin-bottom:12px; font-size:1em;"
                     onkeydown="if(event.key==='Enter') doLogin()">
-                <p id="login-error" style="color:#ef4444; font-size:0.85em; display:none;">ログイン情報が正しくありません</p>
+                <p id="login-error" style="color:#ef4444; font-size:0.95em; font-weight:600; display:none; margin-top:8px;">ログイン情報が正しくありません</p>
             </div>
-            <button class="primary" style="width:100%; padding:12px;" onclick="doLogin()">ログイン</button>
+            <button class="primary" style="width:100%; padding:14px; font-size:1.1em; font-weight:700;" onclick="doLogin()">ログイン</button>
             <p style="margin-top:20px; font-size:0.8em; color:#64748b;">管理者ID: admin / PW: fts2531de</p>
         </div>
     </div>
@@ -806,30 +917,8 @@
                             <li>発行されたURLを上記の入力欄に貼り付けて「設定保存」をクリック。</li>
                         </ol>
                         <textarea id="gas-code" readonly
-                            style="width:100%; height:150px; font-family:monospace; font-size:12px; padding:10px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; margin-top:10px;">
-function doPost(e) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-  try {
-    const contents = JSON.parse(e.postData.contents);
-    const type = contents.type; 
-    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = spreadsheet.getSheets()[0];
-    if (type === 'save') {
-      sheet.getRange(1, 1).setValue(JSON.stringify(contents.state));
-      return ContentService.createTextOutput(JSON.stringify({result: 'success'})).setMimeType(ContentService.MimeType.JSON);
-    } else if (type === 'load') {
-      const data = sheet.getRange(1, 1).getValue();
-      return ContentService.createTextOutput(JSON.stringify({result: 'success', data: data ? JSON.parse(data) : null})).setMimeType(ContentService.MimeType.JSON);
-    }
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-function doGet(e) {
-  return ContentService.createTextOutput("GAS is running. Use POST for data operations.");
-}</textarea>
+                            style="width:100%; height:150px; font-family:monospace; font-size:12px; padding:10px; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; margin-top:10px;">gasCode.jsファイルの内容をコピーしてGoogle Apps Scriptエディタに貼り付けてください。</textarea>
+                        <p style="font-size:0.9em; margin-top:5px; color:#64748b;">※ gasCode.jsファイルを開いて内容をコピーしてください。</p>
                     </div>
                 </div>
             </div>
@@ -923,13 +1012,12 @@ function doGet(e) {
         </div>
     </div>
 
+    <script src="app.js"></script>
     <script>
-        let state = {
-            viewStart: null,
-            viewEnd: null,
-            zoom: 1.0,
-            properties: [],
-            collapsedIds: new Set(),
+        init();
+    </script>
+
+    <!-- 工程追加モーダル -->
             // Auth & Master Data
             currentUser: null,
             masterUsers: [
@@ -1119,28 +1207,113 @@ function doGet(e) {
             if (!state.cloudUrl) return;
             try {
                 const dataToSave = { ...state, collapsedIds: Array.from(state.collapsedIds) };
+                console.log('クラウドへ保存開始:', state.cloudUrl);
+                // Google Apps Scriptのウェブアプリは自動的にCORSを処理するため、
+                // シンプルなfetchリクエストを使用
                 const resp = await fetch(state.cloudUrl, {
                     method: 'POST',
-                    body: JSON.stringify({ type: 'save', state: dataToSave })
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ type: 'save', state: dataToSave }),
+                    redirect: 'follow'
                 });
-                const res = await resp.json();
+                
+                if (!resp.ok) {
+                    const errorText = await resp.text();
+                    console.error('HTTP error response:', resp.status, errorText);
+                    throw new Error(`HTTP error! status: ${resp.status}, message: ${errorText.substring(0, 100)}`);
+                }
+                
+                // レスポンスがテキストの場合とJSONの場合の両方に対応
+                let res;
+                const contentType = resp.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    res = await resp.json();
+                } else {
+                    const text = await resp.text();
+                    console.log('レスポンス（テキスト）:', text);
+                    try {
+                        res = JSON.parse(text);
+                    } catch (e) {
+                        throw new Error('レスポンスがJSON形式ではありません: ' + text.substring(0, 100));
+                    }
+                }
+                
+                console.log('クラウド保存レスポンス:', res);
+                
                 if (res.result === 'success') {
                     state.lastSync = new Date().toLocaleString();
-                    saveToLocalStorage();
+                    // クラウド同期中なので、再度クラウドへ保存しないようにskipCloudSync=trueを指定
+                    saveToLocalStorage(true);
                     renderMaster();
                     console.log('Cloud sync success');
+                    alert('クラウドへデータを保存しました');
+                } else {
+                    alert('クラウドへの保存に失敗しました: ' + (res.error || '不明なエラー'));
+                    console.error('予期しないレスポンス:', res);
                 }
-            } catch (e) { console.error('Cloud sync failed', e); }
+            } catch (e) {
+                console.error('Cloud sync failed', e);
+                let errorMsg = 'クラウドへの保存に失敗しました。\n\n';
+                errorMsg += '確認事項:\n';
+                errorMsg += '1. Google Apps Scriptのウェブアプリが正しくデプロイされているか\n';
+                errorMsg += '2. 「アクセスできるユーザー」が「全員」に設定されているか\n';
+                errorMsg += '3. URLが正しいか\n';
+                errorMsg += '4. インターネット接続を確認してください\n\n';
+                errorMsg += 'エラー詳細: ' + e.message;
+                if (e.message === 'Failed to fetch') {
+                    errorMsg += '\n\n※「Failed to fetch」エラーの場合:\n';
+                    errorMsg += '- Google Apps ScriptのURLが正しいか確認\n';
+                    errorMsg += '- ブラウザのコンソール（F12）で詳細なエラーを確認\n';
+                    errorMsg += '- ネットワークタブでリクエストが送信されているか確認';
+                }
+                alert(errorMsg);
+            }
         }
 
         async function syncFromCloud() {
-            if (!state.cloudUrl) return;
+            if (!state.cloudUrl) {
+                alert('クラウドURLが設定されていません');
+                return;
+            }
             try {
+                console.log('クラウドから読み込み開始:', state.cloudUrl);
+                // Google Apps Scriptのウェブアプリは自動的にCORSを処理するため、
+                // シンプルなfetchリクエストを使用
                 const resp = await fetch(state.cloudUrl, {
                     method: 'POST',
-                    body: JSON.stringify({ type: 'load' })
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ type: 'load' }),
+                    redirect: 'follow'
                 });
-                const res = await resp.json();
+                
+                if (!resp.ok) {
+                    const errorText = await resp.text();
+                    console.error('HTTP error response:', resp.status, errorText);
+                    throw new Error(`HTTP error! status: ${resp.status}, message: ${errorText.substring(0, 100)}`);
+                }
+                
+                // レスポンスがテキストの場合とJSONの場合の両方に対応
+                let res;
+                const contentType = resp.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    res = await resp.json();
+                } else {
+                    const text = await resp.text();
+                    console.log('レスポンス（テキスト）:', text);
+                    try {
+                        res = JSON.parse(text);
+                    } catch (e) {
+                        // JSONパースに失敗した場合、エラーとして扱う
+                        throw new Error('レスポンスがJSON形式ではありません: ' + text.substring(0, 100));
+                    }
+                }
+                
+                console.log('クラウドレスポンス:', res);
+                
                 if (res.result === 'success' && res.data) {
                     const cloudState = res.data;
                     const currentUrl = state.cloudUrl; // 現在の接続先を保持
@@ -1152,16 +1325,36 @@ function doGet(e) {
                     state.lastSync = new Date().toLocaleString();
 
                     // クラウドから読み込んだ直後にクラウドへ保存（ループ）するのを防ぐ
-                    const dataToSave = { ...state, collapsedIds: Array.from(state.collapsedIds) };
-                    localStorage.setItem('gantt_state', JSON.stringify(dataToSave));
+                    // skipCloudSync=trueで保存して、自動同期を防ぐ
+                    saveToLocalStorage(true);
 
                     render();
                     if (document.getElementById('master-screen').style.display === 'flex') renderMaster();
                     console.log('Cloud data loaded successfully');
+                    alert('クラウドからデータを読み込みました');
+                } else if (res.result === 'success' && res.data === null) {
+                    alert('クラウドにデータが保存されていません。まずデータを保存してください。');
+                } else {
+                    alert('クラウドからの読み込みに失敗しました: ' + (res.error || 'データが見つかりません'));
+                    console.error('予期しないレスポンス:', res);
                 }
             } catch (e) {
                 console.error('Cloud load failed', e);
-                alert('クラウドからの読み込みに失敗しました。URLが正しいか確認してください。');
+                let errorMsg = 'クラウドからの読み込みに失敗しました。\n\n';
+                errorMsg += '確認事項:\n';
+                errorMsg += '1. Google Apps Scriptのウェブアプリが正しくデプロイされているか\n';
+                errorMsg += '2. 「アクセスできるユーザー」が「全員」に設定されているか\n';
+                errorMsg += '3. URLが正しいか\n';
+                errorMsg += '4. インターネット接続を確認してください\n\n';
+                errorMsg += 'エラー詳細: ' + e.message;
+                if (e.message === 'Failed to fetch' || e.message.includes('Failed to fetch')) {
+                    errorMsg += '\n\n※「Failed to fetch」エラーの場合:\n';
+                    errorMsg += '- Google Apps ScriptのURLが正しいか確認\n';
+                    errorMsg += '- ブラウザのコンソール（F12）で詳細なエラーを確認\n';
+                    errorMsg += '- ネットワークタブでリクエストが送信されているか確認\n';
+                    errorMsg += '- URLをブラウザで直接開いて「GAS is running」と表示されるか確認';
+                }
+                alert(errorMsg);
             }
         }
 
@@ -1259,10 +1452,12 @@ function doGet(e) {
         };
         window.delMProp = (i) => { if (confirm('削除しますか？')) { state.masterProperties.splice(i, 1); saveToLocalStorage(); renderMaster(); } };
 
-        function saveToLocalStorage() {
+        function saveToLocalStorage(skipCloudSync = false) {
             const dataToSave = { ...state, collapsedIds: Array.from(state.collapsedIds) };
             localStorage.setItem('gantt_state', JSON.stringify(dataToSave));
-            if (state.cloudUrl) syncToCloud();
+            if (state.cloudUrl && !skipCloudSync) {
+                syncToCloud();
+            }
         }
 
         function loadFromLocalStorage() {
